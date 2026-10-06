@@ -1,0 +1,2198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SSBU Esports Scouting & Combo Lab Dashboard</title>
+    <!-- Tailwind CSS via CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Shared cloud sync: configure these once with your Supabase project. -->
+    <script>
+        window.SHARED_SYNC_CONFIG = {
+            // Paste your Supabase Project URL and anon/public key here.
+            // Leave blank until the database is created; local storage will still work.
+            url: '',
+            anonKey: '',
+            table: 'dashboard_state',
+            rowId: 'main'
+        };
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Teko:wght@500;700&family=Inter:wght@300;400;600;700&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0b0f19;
+            color: #f1f5f9;
+        }
+        
+        .font-header {
+            font-family: 'Teko', sans-serif;
+            letter-spacing: 0.05em;
+        }
+
+        /* Glassmorphism effects */
+        .glass-panel {
+            background: rgba(18, 24, 38, 0.75);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .glass-card {
+            background: rgba(30, 41, 59, 0.5);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: all 0.2s ease-in-out;
+        }
+
+        .glass-card:hover {
+            border-color: rgba(99, 102, 241, 0.4);
+            transform: translateY(-2px);
+        }
+
+        /* Custom scrollbars */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0b0f19;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #1e293b;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #334155;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col md:flex-row antialiased">
+
+    <!-- Sidebar Navigation -->
+    <aside class="w-full md:w-64 glass-panel border-r border-slate-800 flex-shrink-0 flex flex-col justify-between z-20">
+        <div>
+            <!-- Header Logo -->
+            <div class="p-5 border-b border-slate-800 flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-red-600 via-indigo-600 to-amber-500 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+                    <i data-lucide="swords" class="w-6 h-6 text-white"></i>
+                </div>
+                <div>
+                    <h1 class="font-header text-2xl font-bold tracking-wider leading-none text-white">NATE'S NOTES</h1>
+                    <p class="text-xs text-indigo-400 font-semibold">VARSITY ESPORTS</p>
+                </div>
+            </div>
+
+            <!-- Navigation Links -->
+            <nav class="p-4 space-y-1">
+                <button onclick="switchTab('rosters')" id="nav-rosters" class="nav-btn w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors bg-indigo-600/20 text-indigo-400 border border-indigo-500/30">
+                    <i data-lucide="users" class="w-5 h-5"></i>
+                    <span>Rival Rosters</span>
+                </button>
+                <button onclick="switchTab('ba-team')" id="nav-ba-team" class="nav-btn w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors text-slate-400 hover:text-slate-200 hover:bg-slate-800/50">
+                    <i data-lucide="shield" class="w-5 h-5"></i>
+                    <span>BA Team</span>
+                </button>
+                <button onclick="toggleComboNav()" id="nav-combo-lab" class="nav-btn w-full flex items-center justify-between px-4 py-3 rounded-lg text-sm font-medium transition-colors text-slate-400 hover:text-slate-200 hover:bg-slate-800/50">
+                    <span class="flex items-center space-x-3">
+                        <i data-lucide="flask-conical" class="w-5 h-5"></i>
+                        <span>Combo Lab</span>
+                    </span>
+                    <i id="combo-nav-chevron" data-lucide="chevron-right" class="w-4 h-4 transition-transform"></i>
+                </button>
+                <div id="combo-player-nav" class="hidden ml-4 mt-1 mb-2 pl-3 border-l border-slate-800 space-y-0.5">
+                    <!-- BA players are populated here dynamically -->
+                </div>
+                <button onclick="switchTab('matchups')" id="nav-matchups" class="nav-btn w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors text-slate-400 hover:text-slate-200 hover:bg-slate-800/50">
+                    <i data-lucide="shield-alert" class="w-5 h-5"></i>
+                    <span>Matchup Strategy</span>
+                </button>
+                <button onclick="switchTab('daily-focus')" id="nav-daily-focus" class="nav-btn w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors text-slate-400 hover:text-slate-200 hover:bg-slate-800/50">
+                    <i data-lucide="target" class="w-5 h-5"></i>
+                    <span>Daily Focus & Prep</span>
+                </button>
+            </nav>
+        </div>
+
+        <!-- Footer / Status -->
+        <div class="p-4 border-t border-slate-800 text-xs text-slate-500 flex justify-between items-center">
+            <span class="flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                Varsity Season 2026
+            </span>
+            <span id="player-count-badge" class="px-2 py-0.5 rounded bg-slate-800 text-slate-300">0 Players</span>
+        </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 flex flex-col h-screen overflow-y-auto bg-slate-950 p-4 md:p-8">
+
+        <!-- ==================== TAB 1: ROSTERS ==================== -->
+        <section id="tab-rosters" class="tab-content space-y-6">
+            <!-- Top Bar & Filters -->
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-800">
+                <div>
+                    <h2 class="font-header text-4xl font-bold tracking-wide text-white">VARSITY & RIVAL ROSTERS</h2>
+                    <p class="text-slate-400 text-sm">Opponent scouting logs, gamertags, and character mains recorded from local school leagues.</p>
+                </div>
+                <div class="flex flex-wrap items-center gap-3">
+                    <!-- Search Input -->
+                    <div class="relative flex-1 sm:w-64">
+                        <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-500"></i>
+                        <input type="text" id="roster-search" oninput="filterRosters()" placeholder="Search player or tag..." class="w-full bg-slate-900 border border-slate-800 rounded-lg pl-9 pr-4 py-2 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500">
+                    </div>
+                    <!-- School Select Filter -->
+                    <select id="school-filter" onchange="filterRosters()" class="bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500">
+                        <option value="ALL">All Teams</option>
+                        <option value="Varsity Marshall">Varsity Marshall</option>
+                        <option value="WLA Varsity">WLA Varsity</option>
+                        <option value="Varsity Menominee Nation">Varsity Menominee Nation</option>
+                        <option value="Luck High School Varsity">Luck High School Varsity</option>
+                        <option value="Random Lake Varsity">Random Lake Varsity</option>
+                        <option value="Fenimore Varsity">Fenimore Varsity</option>
+                        <option value="Flambeau Varsity Smash">Flambeau Varsity Smash</option>
+                        <option value="Williams Bay Varsity Smash">Williams Bay Varsity Smash</option>
+                        <option value="TLA Varsity Smash">TLA Varsity Smash</option>
+                    </select>
+                    <!-- Add Player Button -->
+                    <button onclick="openAddPlayerModal()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 transition">
+                        <i data-lucide="user-plus" class="w-4 h-4"></i> Add Player
+                    </button>
+                </div>
+            </div>
+
+            <!-- Roster Grids Grouped by School -->
+            <div id="rosters-container" class="space-y-8">
+                <!-- Dynamically populated by JS -->
+            </div>
+        </section>
+
+        <!-- ==================== TAB: BA TEAM ==================== -->
+        <section id="tab-ba-team" class="tab-content hidden space-y-6">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-800">
+                <div>
+                    <h2 class="font-header text-4xl font-bold tracking-wide text-white">BA TEAM ROSTER & CREW STRATEGY</h2>
+                    <p class="text-slate-400 text-sm">Brookfield Academy varsity lineup, character mains, stage preferences, and crew battle rotation.</p>
+                </div>
+                <button onclick="openAddBaPlayerModal()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 transition self-start md:self-auto">
+                    <i data-lucide="user-plus" class="w-4 h-4"></i> Add BA Player
+                </button>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- BA Roster List -->
+                <div class="lg:col-span-2 space-y-4">
+                    <div class="flex items-center justify-between">
+                        <h3 class="font-header text-2xl font-bold text-white">BA TEAM PLAYERS</h3>
+                        <span id="ba-team-count" class="text-xs font-semibold text-indigo-400 bg-indigo-500/10 border border-indigo-500/30 px-2.5 py-1 rounded-full">0 Players</span>
+                    </div>
+                    <div id="ba-players-container" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <!-- Dynamic BA Players Card Grid -->
+                    </div>
+                </div>
+
+                <!-- Crew Battle Lineup & Notes -->
+                <div class="space-y-6">
+                    <div class="glass-panel p-5 rounded-xl space-y-4 border-t-4 border-indigo-500">
+                        <div class="flex items-center justify-between">
+                            <h3 class="font-header text-2xl font-bold text-white">CREW BATTLE LINEUP</h3>
+                            <i data-lucide="swords" class="w-5 h-5 text-indigo-400"></i>
+                        </div>
+                        <p class="text-xs text-slate-400">Order of play for Crew Battles:</p>
+                        <div id="ba-crew-rotation" class="space-y-2">
+                            <!-- Populated dynamically -->
+                        </div>
+                    </div>
+
+                    <div class="glass-panel p-5 rounded-xl space-y-3">
+                        <div class="flex items-center justify-between">
+                            <h3 class="font-header text-2xl font-bold text-white">TEAM TACTICS & NOTES</h3>
+                            <i data-lucide="notebook-pen" class="w-5 h-5 text-amber-400"></i>
+                        </div>
+                        <textarea id="ba-team-notes" rows="5" placeholder="Record BA Team stage ban strategy, warm-up schedules, or counter-pick plans..." class="w-full bg-slate-900 border border-slate-800 rounded-lg p-3 text-sm text-slate-200 focus:outline-none focus:border-indigo-500" oninput="saveBaNotes()"></textarea>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== TAB 2: COMBO LAB ==================== -->
+        <section id="tab-combo-lab" class="tab-content hidden space-y-6">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-800">
+                <div>
+                    <h2 class="font-header text-4xl font-bold tracking-wide text-white">COMBO LAB</h2>
+                    <p class="text-slate-400 text-sm">Select a BA Team player from the sidebar to view and edit their matchup-specific combo book.</p>
+                </div>
+                <button onclick="openAddComboModal()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 transition self-start md:self-auto">
+                    <i data-lucide="plus-circle" class="w-4 h-4"></i> Log New Combo Lab
+                </button>
+            </div>
+
+            <div id="combo-player-empty" class="glass-panel p-10 rounded-xl text-center">
+                <i data-lucide="user-round-search" class="w-12 h-12 mx-auto mb-3 text-indigo-400"></i>
+                <h3 class="font-header text-2xl font-bold text-white">SELECT A BA PLAYER</h3>
+                <p class="text-sm text-slate-500 mt-2">Choose a player from the Combo Lab menu in the sidebar to open their combo book.</p>
+            </div>
+
+            <div id="combo-player-book" class="hidden space-y-8">
+                <div>
+                    <h3 id="combo-player-title" class="font-header text-3xl font-bold text-white">PLAYER COMBO BOOK</h3>
+                    <p id="combo-player-subtitle" class="text-sm text-slate-400 mt-1"></p>
+                </div>
+                <div class="space-y-3">
+                    <div class="flex items-center justify-between border-b border-emerald-500/30 pb-2">
+                        <h4 class="font-header text-2xl font-bold text-emerald-400">LIGHTWEIGHT COMBOS</h4>
+                    </div>
+                    <div id="combo-section-lightweight" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div>
+                </div>
+                <div class="space-y-3">
+                    <div class="flex items-center justify-between border-b border-indigo-500/30 pb-2">
+                        <h4 class="font-header text-2xl font-bold text-indigo-400">MEDIUMWEIGHT COMBOS</h4>
+                    </div>
+                    <div id="combo-section-mediumweight" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div>
+                </div>
+                <div class="space-y-3">
+                    <div class="flex items-center justify-between border-b border-rose-500/30 pb-2">
+                        <h4 class="font-header text-2xl font-bold text-rose-400">HEAVYWEIGHT COMBOS</h4>
+                    </div>
+                    <div id="combo-section-heavyweight" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== TAB 3: MATCHUP STRATEGY ==================== -->
+        <section id="tab-matchups" class="tab-content hidden space-y-6">
+            <div class="pb-4 border-b border-slate-800">
+                <h2 class="font-header text-4xl font-bold tracking-wide text-white">MATCHUP CHEAT SHEET & COUNTER-PICKS</h2>
+                <p class="text-slate-400 text-sm">Select high-frequency opponent characters from rival rosters to view anti-meta notes and frame data strategies.</p>
+            </div>
+
+            <!-- Matchup Selector Bar -->
+            <div class="glass-panel p-4 rounded-xl flex flex-wrap items-center gap-4">
+                <div class="flex-1 min-w-[200px]">
+                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Search Fighter</label>
+                    <div class="relative">
+                        <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-500"></i>
+                        <input type="text" id="matchup-search" oninput="filterMatchupCharacters()" placeholder="Search character name..." class="w-full bg-slate-900 border border-slate-800 rounded-lg pl-9 pr-4 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500">
+                    </div>
+                </div>
+                <div class="w-full sm:w-48">
+                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Filter Archetype</label>
+                    <select id="matchup-archetype-filter" onchange="filterMatchupCharacters()" class="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500">
+                        <option value="ALL">All Archetypes</option>
+                        <option value="Sword Fighter">Sword Fighters</option>
+                        <option value="Zoner">Zoners</option>
+                        <option value="Brawler / Rushdown">Brawler / Rushdown</option>
+                        <option value="Heavy / Grappler">Heavy / Grapplers</option>
+                        <option value="FGC / Gimmick">FGC / Gimmick</option>
+                        <option value="All-Rounder">All-Rounders</option>
+                    </select>
+                </div>
+                <div class="flex-1 min-w-[200px]">
+                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Target Fighter Selection</label>
+                    <select id="matchup-char-select" onchange="renderMatchupDetails()" class="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500">
+                        <!-- Populated dynamically with all SSBU characters -->
+                    </select>
+                </div>
+            </div>
+
+            <!-- Matchup Analysis Display -->
+            <div id="matchup-detail-container" class="space-y-6">
+                <!-- Dynamically populated -->
+            </div>
+        </section>
+
+        <!-- ==================== TAB 4: DAILY FOCUS & PREP ==================== -->
+        <section id="tab-daily-focus" class="tab-content hidden space-y-6">
+            <div class="pb-4 border-b border-slate-800">
+                <h2 class="font-header text-4xl font-bold tracking-wide text-white">DAILY FOCUS & TOURNAMENT PREP</h2>
+                <p class="text-slate-400 text-sm">Structure your school-day preparation without needing match replays.</p>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Today's Focus Goal Card -->
+                <div class="glass-panel p-6 rounded-xl space-y-4 border-t-4 border-indigo-500">
+                    <div class="flex items-center justify-between">
+                        <h3 class="font-header text-2xl font-bold text-white">TODAY'S MAIN FOCUS</h3>
+                        <i data-lucide="target" class="w-5 h-5 text-indigo-400"></i>
+                    </div>
+                    <textarea id="daily-focus-text" rows="4" placeholder="e.g., Today in practice I will focus on staying calm on ledge and timing my neutral air spacing on shield..." class="w-full bg-slate-900 border border-slate-800 rounded-lg p-3 text-sm text-slate-200 focus:outline-none focus:border-indigo-500"></textarea>
+                    <button onclick="saveDailyFocus()" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-2 rounded-lg text-sm transition">
+                        Save Focus Goal
+                    </button>
+                </div>
+
+                <!-- Pre-Match Checklist -->
+                <div class="lg:col-span-2 glass-panel p-6 rounded-xl space-y-4">
+                    <h3 class="font-header text-2xl font-bold text-white flex items-center justify-between">
+                        <span>PRE-MATCH ROUTINE CHECKLIST</span>
+                        <i data-lucide="check-square" class="w-5 h-5 text-indigo-400"></i>
+                    </h3>
+                    <div class="space-y-3" id="checklist-container">
+                        <!-- Dynamically generated checklist items -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Modal: Add/Edit Player -->
+    <div id="player-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
+        <div class="glass-panel w-full max-w-md p-6 rounded-2xl space-y-4 border border-slate-700 shadow-2xl">
+            <div class="flex justify-between items-center pb-2 border-b border-slate-800">
+                <h3 id="modal-player-title" class="font-header text-2xl font-bold text-white">ADD PLAYER TO ROSTER</h3>
+                <button onclick="closeAddPlayerModal()" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <form id="player-form" onsubmit="handlePlayerSubmit(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Target School / Roster</label>
+                    <select id="modal-player-school" required class="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500">
+                        <option value="Varsity Marshall">Varsity Marshall</option>
+                        <option value="WLA Varsity">WLA Varsity</option>
+                        <option value="Varsity Menominee Nation">Varsity Menominee Nation</option>
+                        <option value="Luck High School Varsity">Luck High School Varsity</option>
+                        <option value="Random Lake Varsity">Random Lake Varsity</option>
+                        <option value="Fenimore Varsity">Fenimore Varsity</option>
+                        <option value="Flambeau Varsity Smash">Flambeau Varsity Smash</option>
+                        <option value="Williams Bay Varsity Smash">Williams Bay Varsity Smash</option>
+                        <option value="TLA Varsity Smash">TLA Varsity Smash</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Player Name</label>
+                    <input type="text" id="modal-player-name" required placeholder="e.g. Alexander" class="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Gamertag / Note</label>
+                    <input type="text" id="modal-player-tag" placeholder="e.g. TacticalTro" class="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Main Characters (comma separated)</label>
+                    <input type="text" id="modal-player-mains" placeholder="e.g. Sephiroth, Cloud or TBD" class="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500">
+                </div>
+                <div class="flex justify-end gap-3 pt-2">
+                    <button type="button" onclick="closeAddPlayerModal()" class="px-4 py-2 rounded-lg text-sm text-slate-400 hover:bg-slate-800">Cancel</button>
+                    <button type="submit" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-semibold">Save Player</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Add/Edit Combo -->
+    <div id="combo-modal" class="fixed inset-0 bg-slate-950/85 backdrop-blur-md hidden items-center justify-center p-4 z-50 overflow-y-auto">
+        <div class="glass-panel w-full max-w-2xl p-6 rounded-2xl space-y-5 border border-indigo-500/30 shadow-2xl my-8">
+            <div class="flex justify-between items-center pb-3 border-b border-slate-800">
+                <h3 id="combo-modal-title" class="font-header text-2xl font-bold text-white">LOG NEW COMBO LAB EXPERIMENT</h3>
+                <button type="button" onclick="closeAddComboModal()" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <form id="combo-form" onsubmit="handleComboSubmit(event)" class="space-y-4">
+                <input type="hidden" id="combo-edit-id">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">BA Player</label>
+                        <select id="combo-player-id" required class="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500"></select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Weight Class</label>
+                        <select id="combo-weight-class" required class="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500">
+                            <option value="lightweight">Lightweight</option>
+                            <option value="mediumweight">Mediumweight</option>
+                            <option value="heavyweight">Heavyweight</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Combo Name</label>
+                    <input id="combo-name" required class="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500">
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div><label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Usable At</label><input id="combo-usable" placeholder="0%" class="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200"></div>
+                    <div><label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Lands</label><input id="combo-lands" type="number" min="0" value="0" class="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200"></div>
+                    <div><label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Failed</label><input id="combo-failed" type="number" min="0" value="0" class="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200"></div>
+                </div>
+                <div>
+                    <div class="flex justify-between items-center mb-2"><label class="text-xs font-semibold text-slate-400 uppercase">Move Sequence</label><button type="button" onclick="addMoveStepInput()" class="text-xs text-indigo-400 hover:text-indigo-300">+ Add Move</button></div>
+                    <div id="move-steps-container" class="space-y-2"></div>
+                    <div class="text-right text-xs text-slate-500 mt-2">Calculated Damage: <span id="calculated-total-damage" class="text-amber-400 font-bold">0.0%</span></div>
+                </div>
+                <div class="flex justify-end gap-3 pt-2 border-t border-slate-800">
+                    <button type="button" onclick="closeAddComboModal()" class="px-4 py-2 rounded-lg text-sm text-slate-400 hover:bg-slate-800">Cancel</button>
+                    <button type="submit" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-semibold">Save Combo</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Add BA Team Member -->
+    <div id="ba-player-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
+        <div class="glass-panel w-full max-w-md p-6 rounded-2xl space-y-4 border border-slate-700 shadow-2xl">
+            <div class="flex justify-between items-center pb-2 border-b border-slate-800">
+                <h3 class="font-header text-2xl font-bold text-white">ADD BA TEAM MEMBER</h3>
+                <button onclick="closeAddBaPlayerModal()" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <form id="ba-player-form" onsubmit="handleBaPlayerSubmit(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Player Name</label>
+                    <input type="text" id="modal-ba-name" required placeholder="e.g. Nate" class="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Gamertag</label>
+                    <input type="text" id="modal-ba-tag" placeholder="e.g. Kageroy" class="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Mains (comma separated)</label>
+                    <input type="text" id="modal-ba-mains" placeholder="e.g. Roy, Sora" class="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500">
+                </div>
+                <div class="flex justify-end gap-3 pt-2">
+                    <button type="button" onclick="closeAddBaPlayerModal()" class="px-4 py-2 rounded-lg text-sm text-slate-400 hover:bg-slate-800">Cancel</button>
+                    <button type="submit" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-semibold">Add Member</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: BA Player Detailed Stats & Profile -->
+    <div id="ba-player-stats-modal" class="fixed inset-0 bg-slate-950/85 backdrop-blur-md hidden items-center justify-center p-4 z-50 overflow-y-auto">
+        <div class="glass-panel w-full max-w-2xl p-6 rounded-2xl space-y-6 border border-indigo-500/30 shadow-2xl my-8">
+            <!-- Modal Header -->
+            <div class="flex justify-between items-start pb-4 border-b border-slate-800">
+                <div class="flex items-center space-x-3">
+                    <div id="modal-stat-avatar" class="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-600 to-indigo-900 text-white font-bold text-xl flex items-center justify-center shadow-lg border border-indigo-400/30">
+                        -
+                    </div>
+                    <div>
+                        <div class="flex items-center space-x-2">
+                            <h3 id="modal-stat-name" class="font-header text-3xl font-bold text-white leading-none">-</h3>
+                            <span id="modal-stat-role" class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">-</span>
+                        </div>
+                        <p id="modal-stat-tag" class="text-xs text-indigo-400 font-medium mt-0.5">-</p>
+                    </div>
+                </div>
+                <button onclick="closeBaPlayerStatsModal()" class="text-slate-400 hover:text-white p-1 rounded-lg bg-slate-900 border border-slate-800"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+
+            <!-- Stats Overview Cards -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div class="bg-slate-900/90 p-3 rounded-xl border border-slate-800 text-center">
+                    <span class="text-[10px] uppercase font-semibold text-slate-400 block">Win Rate</span>
+                    <span id="modal-stat-wr" class="text-2xl font-bold text-emerald-400">0%</span>
+                </div>
+                <div class="bg-slate-900/90 p-3 rounded-xl border border-slate-800 text-center">
+                    <span class="text-[10px] uppercase font-semibold text-slate-400 block">W / L Record</span>
+                    <span id="modal-stat-record" class="text-2xl font-bold text-white">0W - 0L</span>
+                </div>
+                <div class="bg-slate-900/90 p-3 rounded-xl border border-slate-800 text-center">
+                    <span class="text-[10px] uppercase font-semibold text-slate-400 block">Stock Diff</span>
+                    <span id="modal-stat-stockdiff" class="text-2xl font-bold text-amber-400">+0</span>
+                </div>
+                <div class="bg-slate-900/90 p-3 rounded-xl border border-slate-800 text-center">
+                    <span class="text-[10px] uppercase font-semibold text-slate-400 block">Overall Skill</span>
+                    <span id="modal-stat-overall" class="text-2xl font-bold text-indigo-400">0</span>
+                </div>
+            </div>
+
+            <!-- Interactive Counters for Matches & Stocks -->
+            <div class="glass-card p-4 rounded-xl space-y-3">
+                <h4 class="text-xs font-semibold text-indigo-400 uppercase tracking-wider flex items-center gap-2">
+                    <i data-lucide="trophy" class="w-4 h-4"></i> Match & Crew Battle Record Tracker
+                </h4>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <!-- Win / Loss Tally -->
+                    <div class="flex items-center justify-between bg-slate-900 p-2.5 rounded-lg border border-slate-800">
+                        <div>
+                            <span class="text-xs text-slate-400 font-semibold block">Sets Won / Lost</span>
+                            <span id="modal-counter-sets" class="text-sm font-bold text-slate-200">0W / 0L</span>
+                        </div>
+                        <div class="flex space-x-1">
+                            <button onclick="adjustBaStat('wins', -1)" class="w-7 h-7 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded font-bold text-xs">-W</button>
+                            <button onclick="adjustBaStat('wins', 1)" class="w-7 h-7 bg-emerald-600/30 hover:bg-emerald-600/50 border border-emerald-500/40 text-emerald-300 rounded font-bold text-xs">+W</button>
+                            <span class="text-slate-700 self-center">|</span>
+                            <button onclick="adjustBaStat('losses', -1)" class="w-7 h-7 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded font-bold text-xs">-L</button>
+                            <button onclick="adjustBaStat('losses', 1)" class="w-7 h-7 bg-rose-600/30 hover:bg-rose-600/50 border border-rose-500/40 text-rose-300 rounded font-bold text-xs">+L</button>
+                        </div>
+                    </div>
+
+                    <!-- Stocks Taken / Lost Tally -->
+                    <div class="flex items-center justify-between bg-slate-900 p-2.5 rounded-lg border border-slate-800">
+                        <div>
+                            <span class="text-xs text-slate-400 font-semibold block">Stocks Taken / Lost</span>
+                            <span id="modal-counter-stocks" class="text-sm font-bold text-slate-200">0 Taken / 0 Lost</span>
+                        </div>
+                        <div class="flex space-x-1">
+                            <button onclick="adjustBaStat('stocksTaken', -1)" class="w-7 h-7 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded font-bold text-xs">-ST</button>
+                            <button onclick="adjustBaStat('stocksTaken', 1)" class="w-7 h-7 bg-indigo-600/30 hover:bg-indigo-600/50 border border-indigo-500/40 text-indigo-300 rounded font-bold text-xs">+ST</button>
+                            <span class="text-slate-700 self-center">|</span>
+                            <button onclick="adjustBaStat('stocksLost', -1)" class="w-7 h-7 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded font-bold text-xs">-SL</button>
+                            <button onclick="adjustBaStat('stocksLost', 1)" class="w-7 h-7 bg-rose-600/30 hover:bg-rose-600/50 border border-rose-500/40 text-rose-300 rounded font-bold text-xs">+SL</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Skill Ratings Breakdown (Sliders) -->
+            <div class="glass-card p-4 rounded-xl space-y-3">
+                <h4 class="text-xs font-semibold text-indigo-400 uppercase tracking-wider flex items-center gap-2">
+                    <i data-lucide="sliders" class="w-4 h-4"></i> Performance Skill Radar (0-100)
+                </h4>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3" id="modal-skill-sliders-container">
+                    <!-- Dynamically populated skill sliders -->
+                </div>
+            </div>
+
+            <!-- Profile & Scouting Notes Form -->
+            <div class="space-y-4">
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Crew Role</label>
+                        <input type="text" id="modal-edit-role" class="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Best Stage</label>
+                        <input type="text" id="modal-edit-stage" class="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Playstyle Archetype</label>
+                        <input type="text" id="modal-edit-playstyle" class="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Player Scouting & Practice Notes</label>
+                    <textarea id="modal-edit-notes" rows="3" placeholder="Scouting notes, match weaknesses, target practice drills..." class="w-full bg-slate-900 border border-slate-800 rounded-lg p-3 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"></textarea>
+                </div>
+            </div>
+
+            <div class="flex justify-between items-center pt-3 border-t border-slate-800">
+                <span class="text-xs text-slate-500">Changes are automatically saved to your team roster.</span>
+                <button onclick="saveBaPlayerDetails()" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-semibold transition flex items-center gap-2">
+                    <i data-lucide="check" class="w-4 h-4"></i> Save Profile
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript Data & Logic -->
+    <script>
+        // Rosters strictly containing only real user-provided players with unconfirmed mains set to TBD
+        let playersData = [
+            // Varsity Marshall (Captains marked with star)
+            { id: 1, name: 'Alexander', tag: 'bulbmin', mains: ['Sephiroth'], school: 'Varsity Marshall', isCaptain: true },
+            { id: 2, name: 'Jasper', tag: 'Name me', mains: ['TBD'], school: 'Varsity Marshall', isCaptain: true },
+            { id: 3, name: 'Tony', tag: 'TacticalTro', mains: ['Pyra/Mythra', 'Kirby'], school: 'Varsity Marshall' },
+            { id: 4, name: 'Ryan', tag: 'Ryaneust', mains: ['Donkey Kong'], school: 'Varsity Marshall' },
+            { id: 5, name: 'Noah', tag: 'nzoe111', mains: ['Ridley'], school: 'Varsity Marshall' },
+            { id: 6, name: 'Arron', tag: 'LittleOrphan', mains: ['Cloud'], school: 'Varsity Marshall' },
+            { id: 7, name: 'Adam', tag: 'vanishblade', mains: ['TBD'], school: 'Varsity Marshall' },
+            { id: 8, name: 'Logan', tag: 'spoofy', mains: ['TBD'], school: 'Varsity Marshall' },
+            { id: 9, name: 'Micheal', tag: 'byleth-win', mains: ['TBD'], school: 'Varsity Marshall' },
+            { id: 10, name: 'Brandon', tag: 'Beef', mains: ['TBD'], school: 'Varsity Marshall' },
+            { id: 11, name: 'Chris', tag: 'CJ', mains: ['TBD'], school: 'Varsity Marshall' },
+            // WLA Varsity Smash Team
+            { id: 12, name: 'Daniel', tag: 'D4nny', mains: ['TBD'], school: 'WLA Varsity', isCaptain: true },
+            { id: 13, name: 'Zac', tag: 'F350MENO', mains: ['TBD'], school: 'WLA Varsity' },
+            { id: 14, name: 'Jonah', tag: 'Technoja', mains: ['TBD'], school: 'WLA Varsity' },
+            { id: 15, name: 'Jasper', tag: 'ThegreatJB', mains: ['TBD'], school: 'WLA Varsity' },
+            { id: 16, name: 'Wyatt', tag: 'serveralspe', mains: ['TBD'], school: 'WLA Varsity' },
+            { id: 17, name: 'Damian', tag: 'Toxic-waste', mains: ['TBD'], school: 'WLA Varsity' },
+            { id: 18, name: 'Lee', tag: 'Dog Tree', mains: ['TBD'], school: 'WLA Varsity' },
+            // Varsity Menominee Nation
+            { id: 19, name: 'King', tag: 'geekedup', mains: ['TBD'], school: 'Varsity Menominee Nation' },
+            { id: 20, name: 'Phoenix', tag: 'swankypa', mains: ['TBD'], school: 'Varsity Menominee Nation' },
+            { id: 21, name: 'Ottis', tag: 'thechillkid', mains: ['TBD'], school: 'Varsity Menominee Nation' },
+            { id: 22, name: 'Kai', tag: 'thykai2345', mains: ['TBD'], school: 'Varsity Menominee Nation' },
+            { id: 23, name: 'Liam', tag: 'TRN', mains: ['TBD'], school: 'Varsity Menominee Nation' },
+            { id: 24, name: 'Gabriel', tag: 'Kitana', mains: ['TBD'], school: 'Varsity Menominee Nation' },
+            { id: 25, name: 'Sara', tag: 'crawfather', mains: ['TBD'], school: 'Varsity Menominee Nation' },
+            { id: 26, name: 'Melvin', tag: 'sharkpuppy', mains: ['TBD'], school: 'Varsity Menominee Nation' },
+            { id: 27, name: 'Taryn', tag: 'TKO5', mains: ['TBD'], school: 'Varsity Menominee Nation' },
+            // Luck High School Varsity
+            { id: 28, name: 'Logyn', tag: 'russobot', mains: ['TBD'], school: 'Luck High School Varsity' },
+            { id: 29, name: 'Samarah', tag: 'rat k1ng', mains: ['TBD'], school: 'Luck High School Varsity' },
+            { id: 30, name: 'Charlie', tag: 'coolguyM', mains: ['TBD'], school: 'Luck High School Varsity' },
+            { id: 31, name: 'Alex', tag: 'sir quinkle', mains: ['TBD'], school: 'Luck High School Varsity' },
+            { id: 32, name: 'Landon', tag: 'Landon9707', mains: ['TBD'], school: 'Luck High School Varsity' },
+            // Random Lake Varsity Smash Team
+            { id: 33, name: 'Darius', tag: 'retr0', mains: ['TBD'], school: 'Random Lake Varsity', isCaptain: true },
+            { id: 34, name: 'bdonrwardt', tag: 'bdonrwardt', mains: ['TBD'], school: 'Random Lake Varsity' },
+            { id: 35, name: 'Zacharia', tag: 'pizza guy', mains: ['TBD'], school: 'Random Lake Varsity' },
+            { id: 36, name: 'Nicholas', tag: 'nicholasga', mains: ['TBD'], school: 'Random Lake Varsity' },
+            { id: 37, name: 'Cody', tag: 'itscodypro', mains: ['TBD'], school: 'Random Lake Varsity' },
+            { id: 38, name: 'Seeley', tag: 'yoshi532', mains: ['TBD'], school: 'Random Lake Varsity' },
+            { id: 39, name: 'Issac', tag: 'USunited', mains: ['TBD'], school: 'Random Lake Varsity' },
+            // Fenimore Varsity Smash 2026
+            { id: 40, name: 'Collin', tag: 'collision', mains: ['TBD'], school: 'Fenimore Varsity', isCaptain: true },
+            { id: 41, name: 'Diana', tag: 'ciceroni', mains: ['TBD'], school: 'Fenimore Varsity' },
+            { id: 42, name: 'Thomas', tag: 'Roccothu', mains: ['TBD'], school: 'Fenimore Varsity' },
+            { id: 43, name: 'Henry', tag: 'outstanding', mains: ['TBD'], school: 'Fenimore Varsity' },
+            { id: 44, name: 'Jacob', tag: 'Groovyjr', mains: ['TBD'], school: 'Fenimore Varsity' },
+            { id: 45, name: 'Leonardo', tag: 'Leonardo', mains: ['TBD'], school: 'Fenimore Varsity' },
+            // Flambeau Varsity Smash 5v5 Team
+            { id: 46, name: 'Colton', tag: 'Cr4sh', mains: ['TBD'], school: 'Flambeau Varsity Smash', isCaptain: true },
+            { id: 47, name: 'Tyler', tag: 'Tylkwa', mains: ['TBD'], school: 'Flambeau Varsity Smash' },
+            { id: 48, name: 'Levi', tag: 'L3K', mains: ['TBD'], school: 'Flambeau Varsity Smash' },
+            { id: 49, name: 'Jensen', tag: 'yensenyel', mains: ['TBD'], school: 'Flambeau Varsity Smash' },
+            { id: 50, name: 'Cayden', tag: 'CayHac', mains: ['TBD'], school: 'Flambeau Varsity Smash' },
+            { id: 51, name: 'James', tag: 'Fortknight', mains: ['TBD'], school: 'Flambeau Varsity Smash' },
+            { id: 52, name: 'Chase', tag: 'KlondikeB', mains: ['TBD'], school: 'Flambeau Varsity Smash' },
+            { id: 53, name: 'Brantley', tag: 'Brantman', mains: ['TBD'], school: 'Flambeau Varsity Smash' },
+            { id: 54, name: 'Cain', tag: 'Cherrybo', mains: ['TBD'], school: 'Flambeau Varsity Smash' },
+            // Williams Bay Varsity Smash Team
+            { id: 55, name: 'Dallas', tag: 'tomatogu', mains: ['TBD'], school: 'Williams Bay Varsity Smash', isCaptain: true },
+            { id: 56, name: 'Aleks', tag: 'Bleuh', mains: ['TBD'], school: 'Williams Bay Varsity Smash' },
+            { id: 57, name: 'Jasper', tag: 'Tictacinny', mains: ['TBD'], school: 'Williams Bay Varsity Smash' },
+            { id: 58, name: 'Richard', tag: 'Sonciboy2', mains: ['TBD'], school: 'Williams Bay Varsity Smash' },
+            { id: 59, name: 'Henry', tag: 'Happy', mains: ['TBD'], school: 'Williams Bay Varsity Smash' },
+            { id: 60, name: 'Ben', tag: 'Thebushw', mains: ['TBD'], school: 'Williams Bay Varsity Smash' },
+            { id: 61, name: 'Finn', tag: 'Finnthes', mains: ['TBD'], school: 'Williams Bay Varsity Smash' },
+            { id: 62, name: 'Daniel', tag: 'ChickenM', mains: ['TBD'], school: 'Williams Bay Varsity Smash' },
+            // TLA Varsity Smash
+            { id: 63, name: 'Alan', tag: 'yeeclaw', mains: ['TBD'], school: 'TLA Varsity Smash' },
+            { id: 64, name: 'Jaiden', tag: 'kumi', mains: ['TBD'], school: 'TLA Varsity Smash' },
+            { id: 65, name: 'Cloin', tag: 'Trillion', mains: ['TBD'], school: 'TLA Varsity Smash' },
+            { id: 66, name: 'Kavarian', tag: 'Prowler', mains: ['TBD'], school: 'TLA Varsity Smash' },
+            { id: 67, name: 'Jancarlos', tag: 'BOX', mains: ['TBD'], school: 'TLA Varsity Smash' }
+        ];
+
+        // ================================================================
+        // SHARED CLOUD SYNC
+        // ================================================================
+        // The dashboard still works locally, but when SHARED_SYNC_CONFIG is
+        // filled in, every browser reads/writes the same Supabase row.
+        let sharedSyncEnabled = false;
+        let sharedSyncLoaded = false;
+        let sharedSyncSaving = false;
+        let sharedSyncSaveTimer = null;
+        let sharedSyncLastUpdated = null;
+
+        function sharedConfigReady() {
+            const c = window.SHARED_SYNC_CONFIG || {};
+            return !!(c.url && c.anonKey);
+        }
+
+        function sharedHeaders() {
+            return {
+                'apikey': window.SHARED_SYNC_CONFIG.anonKey,
+                'Authorization': 'Bearer ' + window.SHARED_SYNC_CONFIG.anonKey,
+                'Content-Type': 'application/json',
+                'Prefer': 'return=representation'
+            };
+        }
+
+        function sharedStateSnapshot() {
+            return {
+                baPlayersData,
+                playersData,
+                comboData,
+                checklistData,
+                dailyFocus: document.getElementById('daily-focus-text')?.value || localStorage.getItem('ssbu_daily_focus') || '',
+                baTeamNotes: document.getElementById('ba-team-notes')?.value || localStorage.getItem('ba_team_notes') || ''
+            };
+        }
+
+        function applySharedState(state) {
+            if (!state || typeof state !== 'object') return;
+            if (Array.isArray(state.baPlayersData)) baPlayersData = state.baPlayersData;
+            if (Array.isArray(state.playersData)) playersData = state.playersData;
+            if (Array.isArray(state.comboData)) comboData = state.comboData;
+            if (Array.isArray(state.checklistData)) checklistData = state.checklistData;
+            if (typeof state.dailyFocus === 'string') {
+                localStorage.setItem('ssbu_daily_focus', state.dailyFocus);
+                const el = document.getElementById('daily-focus-text');
+                if (el) el.value = state.dailyFocus;
+            }
+            if (typeof state.baTeamNotes === 'string') {
+                localStorage.setItem('ba_team_notes', state.baTeamNotes);
+                const el = document.getElementById('ba-team-notes');
+                if (el) el.value = state.baTeamNotes;
+            }
+
+            // Keep the local cache aligned as a fallback.
+            try {
+                localStorage.setItem(BA_PLAYERS_STORAGE_KEY, JSON.stringify(baPlayersData));
+                localStorage.setItem(ROSTERS_STORAGE_KEY, JSON.stringify(playersData));
+                localStorage.setItem(COMBOS_STORAGE_KEY, JSON.stringify(comboData));
+                localStorage.setItem(CHECKLIST_STORAGE_KEY, JSON.stringify(checklistData));
+            } catch (_) {}
+        }
+
+        async function sharedFetch(path, options = {}) {
+            const c = window.SHARED_SYNC_CONFIG;
+            return fetch(c.url.replace(/\/$/, '') + '/rest/v1/' + path, {
+                ...options,
+                headers: { ...sharedHeaders(), ...(options.headers || {}) }
+            });
+        }
+
+        async function loadSharedState() {
+            if (!sharedConfigReady()) return false;
+            sharedSyncEnabled = true;
+            try {
+                const c = window.SHARED_SYNC_CONFIG;
+                const res = await sharedFetch(`${c.table}?id=eq.${encodeURIComponent(c.rowId)}&select=id,state,updated_at`);
+                if (!res.ok) throw new Error('Database read failed: ' + res.status);
+                const rows = await res.json();
+                if (rows.length) {
+                    sharedSyncLastUpdated = rows[0].updated_at || null;
+                    applySharedState(rows[0].state);
+                } else {
+                    await writeSharedState();
+                }
+                sharedSyncLoaded = true;
+                return true;
+            } catch (err) {
+                console.warn('Shared sync unavailable; using local storage:', err);
+                sharedSyncEnabled = false;
+                return false;
+            }
+        }
+
+        async function writeSharedState() {
+            if (!sharedSyncEnabled || !sharedConfigReady()) return;
+            const c = window.SHARED_SYNC_CONFIG;
+            const payload = { id: c.rowId, state: sharedStateSnapshot(), updated_at: new Date().toISOString() };
+            sharedSyncSaving = true;
+            try {
+                const res = await sharedFetch(`${c.table}?on_conflict=id`, {
+                    method: 'POST',
+                    headers: { 'Prefer': 'resolution=merge-duplicates,return=representation' },
+                    body: JSON.stringify(payload)
+                });
+                if (!res.ok) throw new Error('Database write failed: ' + res.status);
+                sharedSyncLastUpdated = payload.updated_at;
+            } catch (err) {
+                console.warn('Could not save shared dashboard state:', err);
+            } finally {
+                sharedSyncSaving = false;
+            }
+        }
+
+        function queueSharedSave() {
+            if (!sharedSyncEnabled || !sharedSyncLoaded) return;
+            clearTimeout(sharedSyncSaveTimer);
+            sharedSyncSaveTimer = setTimeout(() => writeSharedState(), 250);
+        }
+
+        async function pollSharedState() {
+            if (!sharedSyncEnabled || !sharedSyncLoaded || sharedSyncSaving) return;
+            try {
+                const c = window.SHARED_SYNC_CONFIG;
+                const res = await sharedFetch(`${c.table}?id=eq.${encodeURIComponent(c.rowId)}&select=id,state,updated_at`);
+                if (!res.ok) return;
+                const rows = await res.json();
+                if (!rows.length) return;
+                const updated = rows[0].updated_at || null;
+                if (updated && updated !== sharedSyncLastUpdated) {
+                    sharedSyncLastUpdated = updated;
+                    applySharedState(rows[0].state);
+                    renderRosters();
+                    renderCombos();
+                    renderChecklist();
+                    renderBaTeam();
+                    renderComboPlayerSidebar();
+                }
+            } catch (_) {}
+        }
+
+        // Combos 1-4 with exact move-by-move percent damage
+        let comboData = [
+            {
+                id: 1,
+                playerId: 102,
+                weightClass: 'heavyweight',
+                title: 'Combo 1: Ground-Air Pop Extension',
+                usable: '0%',
+                lands: 0,
+                failed: 23,
+                moves: [
+                    { name: 'Down Throw', damage: 7.2 },
+                    { name: 'Jab', damage: 8.3 },
+                    { name: 'Up Air', damage: 8.5 },
+                    { name: 'Ground Touch + Up Air', damage: 7.3 },
+                    { name: 'Ground Touch + Up Air', damage: 7.8 }
+                ]
+            },
+            {
+                id: 2,
+                playerId: 102,
+                weightClass: 'heavyweight',
+                title: 'Combo 2: Mid-% Throw Reset',
+                usable: '40%',
+                lands: 0,
+                failed: 0,
+                moves: [
+                    { name: 'Down Throw', damage: 6.6 },
+                    { name: 'Up Air', damage: 6.4 },
+                    { name: 'Ground Touch + Up Air', damage: 7.0 }
+                ]
+            },
+            {
+                id: 3,
+                playerId: 102,
+                weightClass: 'heavyweight',
+                title: 'Combo 3: Forward Air Touch Routine',
+                usable: '10%',
+                lands: 0,
+                failed: 0,
+                moves: [
+                    { name: 'Forward Air (from above)', damage: 10.4 },
+                    { name: 'Ground Touch + Up Air', damage: 6.7 },
+                    { name: 'Ground Touch + Up Air', damage: 9.3 }
+                ]
+            },
+            {
+                id: 4,
+                playerId: 102,
+                weightClass: 'heavyweight',
+                title: 'Combo 4: Down Throw Jab Bridge',
+                usable: '0%',
+                lands: 7,
+                failed: 0,
+                moves: [
+                    { name: 'Down Throw', damage: 6.0 },
+                    { name: 'Jab', damage: 9.0 },
+                    { name: 'Forward Air', damage: 11.2 },
+                    { name: 'Ground Touch + Up Smash', damage: 21.7 }
+                ]
+            }
+        ];
+
+        let checklistData = [
+            { text: "Review opponent character matchup cheat sheets for today's match", done: false },
+            { text: "Hydrate and stretch hands/wrists between bracket rounds", done: false },
+            { text: "Visualize neutral spacing and safe out-of-shield options", done: false },
+            { text: "Check controller settings and tap-jump preference", done: false },
+            { text: "Set 1 focus goal for practice or tournament set", done: false }
+        ];
+
+        // BA Team Roster Data - User Updated with detailed stats
+        let baPlayersData = [
+            { 
+                id: 101, 
+                name: 'Matthew', 
+                tag: 'AHuman', 
+                role: 'Captain / Anchor', 
+                mains: ['Sora'], 
+                bestStage: 'Hollow Bastion',
+                wins: 18, 
+                losses: 5, 
+                stocksTaken: 48, 
+                stocksLost: 22,
+                playstyle: 'Bait & Punish / Aerial Control',
+                notes: 'Clutch performer in anchor spot. Strong off-stage ledge trapping with Sora.',
+                ratings: { neutral: 90, edgeguard: 88, disadvantage: 86, clutch: 94, techSkill: 88 }
+            },
+            { 
+                id: 102, 
+                name: 'Nate', 
+                tag: 'Kageroy', 
+                role: 'Starter', 
+                mains: ['Roy'], 
+                bestStage: 'Small Battlefield',
+                wins: 16, 
+                losses: 7, 
+                stocksTaken: 42, 
+                stocksLost: 26,
+                playstyle: 'Aggressive Rushdown',
+                notes: 'Fast reaction speed with sweetspot aerials. Practice patient shielding vs zoners.',
+                ratings: { neutral: 88, edgeguard: 84, disadvantage: 78, clutch: 90, techSkill: 92 }
+            },
+            { 
+                id: 103, 
+                name: 'Molly', 
+                tag: 'MarineLepon', 
+                role: 'Starter', 
+                mains: ['Dark Pit', 'Joker'], 
+                bestStage: 'Battlefield',
+                wins: 14, 
+                losses: 8, 
+                stocksTaken: 36, 
+                stocksLost: 28,
+                playstyle: 'All-Rounder / Adaptable',
+                notes: 'Excellent Joker tether recoveries and Dark Pit arrow edgeguards.',
+                ratings: { neutral: 85, edgeguard: 86, disadvantage: 82, clutch: 85, techSkill: 84 }
+            },
+            { 
+                id: 104, 
+                name: 'Abby', 
+                tag: 'Solusiande', 
+                role: 'Mid-Crew / Counter', 
+                mains: ['Corrin'], 
+                bestStage: 'Town and City',
+                wins: 12, 
+                losses: 6, 
+                stocksTaken: 31, 
+                stocksLost: 20,
+                playstyle: 'Disjoint Spacing',
+                notes: 'Great pin spacing and platform juggling. High success on counter picks.',
+                ratings: { neutral: 84, edgeguard: 80, disadvantage: 80, clutch: 86, techSkill: 82 }
+            },
+            { 
+                id: 105, 
+                name: 'Daniel', 
+                tag: 'UrbsHYBRID', 
+                role: 'Starter', 
+                mains: ['Piranha Plant'], 
+                bestStage: 'Final Destination',
+                wins: 11, 
+                losses: 9, 
+                stocksTaken: 30, 
+                stocksLost: 31,
+                playstyle: 'Trap & Area Denial',
+                notes: 'Ptooie trajectory control is top tier. Strong ledge traps on FD.',
+                ratings: { neutral: 80, edgeguard: 89, disadvantage: 76, clutch: 82, techSkill: 80 }
+            },
+            { 
+                id: 106, 
+                name: 'Lauren', 
+                tag: 'autumnace', 
+                role: 'Starter', 
+                mains: ['Pyra/Mythra'], 
+                bestStage: 'Small Battlefield',
+                wins: 15, 
+                losses: 6, 
+                stocksTaken: 40, 
+                stocksLost: 24,
+                playstyle: 'Rushdown & Heavy Punish',
+                notes: 'Mythra neutral control into Pyra kill confirms. High win rate on Small BF.',
+                ratings: { neutral: 91, edgeguard: 82, disadvantage: 79, clutch: 88, techSkill: 89 }
+            }
+        ];
+
+        // Persist BA Team player data so stats survive tab switches and page/browser reloads.
+        const BA_PLAYERS_STORAGE_KEY = 'ssbu_ba_players_data';
+
+        function loadBaPlayers() {
+            try {
+                const saved = localStorage.getItem(BA_PLAYERS_STORAGE_KEY);
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    if (Array.isArray(parsed)) {
+                        baPlayersData = parsed;
+                    }
+                }
+            } catch (error) {
+                console.warn('Could not load saved BA Team data:', error);
+            }
+        }
+
+        function saveBaPlayers() {
+            try {
+                localStorage.setItem(BA_PLAYERS_STORAGE_KEY, JSON.stringify(baPlayersData));
+                queueSharedSave();
+            } catch (error) {
+                console.warn('Could not save BA Team data:', error);
+            }
+        }
+
+        let currentEditingBaPlayerId = null;
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+
+            const activeTab = document.getElementById(`tab-${tabId}`);
+            if (activeTab) activeTab.classList.remove('hidden');
+
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('bg-indigo-600/20', 'text-indigo-400', 'border', 'border-indigo-500/30');
+                btn.classList.add('text-slate-400', 'hover:text-slate-200', 'hover:bg-slate-800/50');
+            });
+
+            const activeBtn = document.getElementById(`nav-${tabId}`);
+            if (activeBtn) {
+                activeBtn.classList.remove('text-slate-400', 'hover:text-slate-200', 'hover:bg-slate-800/50');
+                activeBtn.classList.add('bg-indigo-600/20', 'text-indigo-400', 'border', 'border-indigo-500/30');
+            }
+        }
+
+        function renderBaTeam() {
+            const container = document.getElementById('ba-players-container');
+            const countBadge = document.getElementById('ba-team-count');
+            const rotationContainer = document.getElementById('ba-crew-rotation');
+
+            if (countBadge) countBadge.textContent = `${baPlayersData.length} Players`;
+
+            if (container) {
+                if (baPlayersData.length === 0) {
+                    container.innerHTML = `<div class="col-span-2 text-center py-8 text-slate-500">No BA Team members added yet.</div>`;
+                } else {
+                    container.innerHTML = baPlayersData.map(player => {
+                        const totalGames = (player.wins || 0) + (player.losses || 0);
+                        const winRate = totalGames > 0 ? Math.round((player.wins / totalGames) * 100) : 0;
+                        const stockDiff = (player.stocksTaken || 0) - (player.stocksLost || 0);
+                        const stockDiffFormatted = stockDiff >= 0 ? `+${stockDiff}` : `${stockDiff}`;
+
+                        return `
+                            <div onclick="openBaPlayerStatsModal(${player.id})" class="glass-card p-4 rounded-xl relative group cursor-pointer hover:border-indigo-500/80 transition shadow-lg">
+                                <button onclick="event.stopPropagation(); deleteBaPlayer(${player.id})" class="absolute top-3 right-3 text-slate-600 hover:text-rose-400 transition opacity-0 group-hover:opacity-100 p-1" title="Remove BA Member">
+                                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                </button>
+                                <div class="flex items-start space-x-3">
+                                    <div class="w-11 h-11 rounded-lg bg-indigo-950 border border-indigo-700/50 flex items-center justify-center font-bold text-indigo-400 text-lg flex-shrink-0 group-hover:scale-105 transition-transform">
+                                        ${escapeHtml(player.name.charAt(0))}
+                                    </div>
+                                    <div class="space-y-1 flex-1 pr-6">
+                                        <div class="flex items-center justify-between">
+                                            <h4 class="font-bold text-white text-base group-hover:text-indigo-300 transition-colors flex items-center gap-1.5">
+                                                <span>${escapeHtml(player.name)}</span>
+                                            </h4>
+                                            <span class="text-[10px] font-bold px-2 py-0.5 rounded ${winRate >= 60 ? 'bg-emerald-950 text-emerald-400 border border-emerald-800/50' : 'bg-slate-800 text-slate-300'}">
+                                                ${winRate}% WR
+                                            </span>
+                                        </div>
+                                        <p class="text-xs text-indigo-400 font-medium">Tag: ${escapeHtml(player.tag)} ${player.role ? `• <span class="text-slate-400">${escapeHtml(player.role)}</span>` : ''}</p>
+                                        
+                                        <div class="flex flex-wrap gap-1 pt-1">
+                                            ${player.mains.map(m => `<span class="px-2 py-0.5 bg-slate-900 border border-slate-800 text-slate-300 rounded text-xs">${escapeHtml(m)}</span>`).join('')}
+                                        </div>
+
+                                        <!-- Quick Stat Badges preview -->
+                                        <div class="pt-2 mt-2 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-400">
+                                            <span>Record: <strong class="text-slate-200">${player.wins || 0}W-${player.losses || 0}L</strong></span>
+                                            <span>Stocks: <strong class="${stockDiff >= 0 ? 'text-amber-400' : 'text-rose-400'}">${stockDiffFormatted}</strong></span>
+                                        </div>
+
+                                        <div class="text-[10px] text-indigo-400 font-semibold flex items-center gap-1 pt-1 opacity-80 group-hover:opacity-100">
+                                            <i data-lucide="bar-chart-2" class="w-3 h-3"></i> Click to view full stats & profile
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                }
+            }
+
+            if (rotationContainer) {
+                rotationContainer.innerHTML = baPlayersData.map((player, idx) => `
+                    <div onclick="openBaPlayerStatsModal(${player.id})" class="flex items-center justify-between bg-slate-900/80 border border-slate-800 p-2.5 rounded-lg hover:border-indigo-500/50 cursor-pointer transition">
+                        <div class="flex items-center space-x-3">
+                            <span class="w-6 h-6 rounded-full bg-indigo-600/30 text-indigo-300 font-bold text-xs flex items-center justify-center border border-indigo-500/30">
+                                #${idx + 1}
+                            </span>
+                            <div>
+                                <span class="text-xs font-bold text-white block leading-none">${escapeHtml(player.name)} (${escapeHtml(player.tag)})</span>
+                                <span class="text-[10px] text-slate-400">${escapeHtml(player.role || 'Crew Member')}</span>
+                            </div>
+                        </div>
+                        <span class="text-[10px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded border border-slate-700">${escapeHtml(player.mains.join(', ') || 'TBD')}</span>
+                    </div>
+                `).join('');
+            }
+
+            lucide.createIcons();
+        }
+
+        function openBaPlayerStatsModal(playerId) {
+            const player = baPlayersData.find(p => p.id === playerId);
+            if (!player) return;
+
+            currentEditingBaPlayerId = playerId;
+
+            // Header info
+            document.getElementById('modal-stat-avatar').textContent = player.name.charAt(0);
+            document.getElementById('modal-stat-name').textContent = player.name;
+            document.getElementById('modal-stat-role').textContent = player.role || 'BA Member';
+            document.getElementById('modal-stat-tag').textContent = `Gamertag: ${player.tag}`;
+
+            // Ensure ratings object exists
+            if (!player.ratings) {
+                player.ratings = { neutral: 80, edgeguard: 80, disadvantage: 80, clutch: 80, techSkill: 80 };
+            }
+
+            updateBaModalCalculations(player);
+
+            // Populate text inputs
+            document.getElementById('modal-edit-role').value = player.role || '';
+            document.getElementById('modal-edit-stage').value = player.bestStage || '';
+            document.getElementById('modal-edit-playstyle').value = player.playstyle || '';
+            document.getElementById('modal-edit-notes').value = player.notes || '';
+
+            // Render skill sliders
+            const slidersContainer = document.getElementById('modal-skill-sliders-container');
+            const skillLabels = {
+                neutral: 'Neutral & Spacing',
+                edgeguard: 'Edgeguard & Ledge Trap',
+                disadvantage: 'Disadvantage & Recovery',
+                clutch: 'Clutch & Pressure',
+                techSkill: 'Tech Skill & Execution'
+            };
+
+            slidersContainer.innerHTML = Object.entries(skillLabels).map(([key, label]) => {
+                const val = player.ratings[key] || 80;
+                return `
+                    <div class="space-y-1">
+                        <div class="flex justify-between items-center text-xs">
+                            <span class="text-slate-300 font-medium">${label}</span>
+                            <span id="rating-val-${key}" class="font-bold text-indigo-400">${val}</span>
+                        </div>
+                        <input type="range" min="50" max="99" value="${val}" oninput="updateRatingSlider('${key}', this.value)" class="w-full accent-indigo-500 bg-slate-950 rounded h-1.5 cursor-pointer">
+                    </div>
+                `;
+            }).join('');
+
+            const modal = document.getElementById('ba-player-stats-modal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            lucide.createIcons();
+        }
+
+        function updateBaModalCalculations(player) {
+            const wins = player.wins || 0;
+            const losses = player.losses || 0;
+            const totalGames = wins + losses;
+            const winRate = totalGames > 0 ? Math.round((wins / totalGames) * 100) : 0;
+            const stockDiff = (player.stocksTaken || 0) - (player.stocksLost || 0);
+
+            document.getElementById('modal-stat-wr').textContent = `${winRate}%`;
+            document.getElementById('modal-stat-record').textContent = `${wins}W - ${losses}L`;
+            document.getElementById('modal-stat-stockdiff').textContent = stockDiff >= 0 ? `+${stockDiff}` : `${stockDiff}`;
+            
+            // Calculate overall skill rating average
+            const ratings = player.ratings || { neutral: 80, edgeguard: 80, disadvantage: 80, clutch: 80, techSkill: 80 };
+            const rVals = Object.values(ratings);
+            const avgRating = Math.round(rVals.reduce((a, b) => a + b, 0) / rVals.length);
+            document.getElementById('modal-stat-overall').textContent = avgRating;
+
+            // Counters display
+            document.getElementById('modal-counter-sets').textContent = `${wins}W / ${losses}L`;
+            document.getElementById('modal-counter-stocks').textContent = `${player.stocksTaken || 0} Taken / ${player.stocksLost || 0} Lost`;
+        }
+
+        function adjustBaStat(field, delta) {
+            if (!currentEditingBaPlayerId) return;
+            const player = baPlayersData.find(p => p.id === currentEditingBaPlayerId);
+            if (!player) return;
+
+            player[field] = Math.max(0, (player[field] || 0) + delta);
+            saveBaPlayers();
+            updateBaModalCalculations(player);
+            renderBaTeam();
+            renderComboPlayerSidebar();
+        }
+
+        function updateRatingSlider(ratingKey, val) {
+            if (!currentEditingBaPlayerId) return;
+            const player = baPlayersData.find(p => p.id === currentEditingBaPlayerId);
+            if (!player) return;
+
+            if (!player.ratings) player.ratings = {};
+            player.ratings[ratingKey] = parseInt(val) || 80;
+            saveBaPlayers();
+
+            const valDisplay = document.getElementById(`rating-val-${ratingKey}`);
+            if (valDisplay) valDisplay.textContent = val;
+
+            updateBaModalCalculations(player);
+        }
+
+        function saveBaPlayerDetails() {
+            if (!currentEditingBaPlayerId) return;
+            const player = baPlayersData.find(p => p.id === currentEditingBaPlayerId);
+            if (player) {
+                player.role = document.getElementById('modal-edit-role').value;
+                player.bestStage = document.getElementById('modal-edit-stage').value;
+                player.playstyle = document.getElementById('modal-edit-playstyle').value;
+                player.notes = document.getElementById('modal-edit-notes').value;
+                saveBaPlayers();
+            }
+
+            closeBaPlayerStatsModal();
+            renderBaTeam();
+            renderComboPlayerSidebar();
+        }
+
+        function closeBaPlayerStatsModal() {
+            const modal = document.getElementById('ba-player-stats-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+            currentEditingBaPlayerId = null;
+        }
+
+        function openAddBaPlayerModal() {
+            document.getElementById('ba-player-modal').classList.remove('hidden');
+            document.getElementById('ba-player-modal').classList.add('flex');
+        }
+
+        function closeAddBaPlayerModal() {
+            document.getElementById('ba-player-modal').classList.add('hidden');
+            document.getElementById('ba-player-modal').classList.remove('flex');
+            document.getElementById('ba-player-form').reset();
+        }
+
+        function handleBaPlayerSubmit(e) {
+            e.preventDefault();
+            const name = document.getElementById('modal-ba-name').value;
+            const tag = document.getElementById('modal-ba-tag').value || name;
+            const mainsInput = document.getElementById('modal-ba-mains').value;
+            const mains = mainsInput ? mainsInput.split(',').map(s => s.trim()) : ['TBD'];
+
+            baPlayersData.push({
+                id: Date.now(),
+                name,
+                tag,
+                mains,
+                role: 'Crew Member',
+                bestStage: '',
+                wins: 0,
+                losses: 0,
+                stocksTaken: 0,
+                stocksLost: 0,
+                playstyle: '',
+                notes: '',
+                ratings: { neutral: 80, edgeguard: 80, disadvantage: 80, clutch: 80, techSkill: 80 }
+            });
+            saveBaPlayers();
+
+            closeAddBaPlayerModal();
+            renderBaTeam();
+            renderComboPlayerSidebar();
+        }
+
+        function deleteBaPlayer(id) {
+            baPlayersData = baPlayersData.filter(p => p.id !== id);
+            saveBaPlayers();
+            if (selectedComboPlayerId === id) selectedComboPlayerId = null;
+            renderBaTeam();
+            renderCombos();
+        }
+
+        function saveBaNotes() {
+            const val = document.getElementById('ba-team-notes')?.value;
+            if (val !== undefined) {
+                localStorage.setItem('ba_team_notes', val);
+                queueSharedSave();
+            }
+        }
+
+        function renderRosters() {
+            const container = document.getElementById('rosters-container');
+            const search = (document.getElementById('roster-search')?.value || '').toLowerCase();
+            const schoolFilter = document.getElementById('school-filter')?.value || 'ALL';
+
+            const filtered = playersData.filter(player => {
+                const matchesSearch = player.name.toLowerCase().includes(search) || 
+                                     player.tag.toLowerCase().includes(search) || 
+                                     player.mains.some(m => m.toLowerCase().includes(search));
+                const matchesSchool = schoolFilter === 'ALL' || player.school === schoolFilter;
+                return matchesSearch && matchesSchool;
+            });
+
+            const countBadge = document.getElementById('player-count-badge');
+            if (countBadge) countBadge.textContent = `${playersData.length} Players`;
+
+            if (filtered.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-12 text-slate-500">
+                        <i data-lucide="user-x" class="w-12 h-12 mx-auto mb-3 opacity-50"></i>
+                        <p class="text-lg font-semibold">No players found matching your filter criteria.</p>
+                    </div>
+                `;
+                lucide.createIcons();
+                return;
+            }
+
+            const grouped = {};
+            filtered.forEach(p => {
+                if (!grouped[p.school]) grouped[p.school] = [];
+                grouped[p.school].push(p);
+            });
+
+            container.innerHTML = Object.entries(grouped).map(([schoolName, players]) => `
+                <div class="space-y-3">
+                    <div class="flex items-center space-x-3 pb-2 border-b border-slate-800">
+                        <span class="w-3 h-3 rounded-full bg-indigo-500"></span>
+                        <h3 class="font-header text-2xl font-bold text-white uppercase tracking-wider">${escapeHtml(schoolName)}</h3>
+                        <span class="text-xs bg-slate-800 text-slate-400 px-2 py-0.5 rounded-full">${players.length} members</span>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        ${players.map(player => `
+                            <div class="glass-card p-4 rounded-xl relative group">
+                                <button onclick="deletePlayer(${player.id})" class="absolute top-3 right-3 text-slate-600 hover:text-rose-400 transition opacity-0 group-hover:opacity-100" title="Delete Player">
+                                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                </button>
+                                <div class="flex items-start space-x-3">
+                                    <div class="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center font-bold text-indigo-400 border border-slate-700 flex-shrink-0">
+                                        ${escapeHtml(player.name.charAt(0))}
+                                    </div>
+                                    <div>
+                                        <h4 class="font-bold text-white text-base flex items-center gap-1.5">
+                                            <span>${escapeHtml(player.name)}</span>
+                                            ${player.isCaptain ? `<span class="text-amber-400" title="Team Captain">⭐</span>` : ''}
+                                        </h4>
+                                        <p class="text-xs text-indigo-400 font-medium">Tag: ${escapeHtml(player.tag)}</p>
+                                        <div class="flex flex-wrap gap-1 mt-2">
+                                            ${player.mains.map(m => `
+                                                <span class="px-2 py-0.5 bg-slate-900 border border-slate-800 text-slate-300 rounded text-xs">
+                                                    ${escapeHtml(m)}
+                                                </span>
+                                            `).join('')}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `).join('');
+
+            lucide.createIcons();
+        }
+
+        function filterRosters() {
+            renderRosters();
+        }
+
+        const ROSTERS_STORAGE_KEY = 'ssbu_rival_rosters_data';
+        const CHECKLIST_STORAGE_KEY = 'ssbu_checklist_data';
+
+        function loadRostersData() {
+            try {
+                const saved = localStorage.getItem(ROSTERS_STORAGE_KEY);
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    if (Array.isArray(parsed)) playersData = parsed;
+                }
+            } catch (error) {
+                console.warn('Could not load saved rival roster data:', error);
+            }
+        }
+
+        function saveRostersData() {
+            try {
+                localStorage.setItem(ROSTERS_STORAGE_KEY, JSON.stringify(playersData));
+                queueSharedSave();
+            } catch (error) {
+                console.warn('Could not save rival roster data:', error);
+            }
+        }
+
+        function openAddPlayerModal() {
+            document.getElementById('player-modal').classList.remove('hidden');
+            document.getElementById('player-modal').classList.add('flex');
+        }
+
+        function closeAddPlayerModal() {
+            document.getElementById('player-modal').classList.add('hidden');
+            document.getElementById('player-modal').classList.remove('flex');
+            document.getElementById('player-form').reset();
+        }
+
+        function handlePlayerSubmit(e) {
+            e.preventDefault();
+            const school = document.getElementById('modal-player-school').value;
+            const name = document.getElementById('modal-player-name').value;
+            const tag = document.getElementById('modal-player-tag').value || name;
+            const mainsInput = document.getElementById('modal-player-mains').value;
+            const mains = mainsInput ? mainsInput.split(',').map(s => s.trim()) : ['TBD'];
+
+            const newPlayer = {
+                id: Date.now(),
+                name,
+                tag,
+                mains,
+                school
+            };
+
+            playersData.push(newPlayer);
+            saveRostersData();
+            closeAddPlayerModal();
+            renderRosters();
+        }
+
+        function deletePlayer(id) {
+            playersData = playersData.filter(p => p.id !== id);
+            saveRostersData();
+            renderRosters();
+        }
+
+        let selectedComboPlayerId = null;
+        const COMBOS_STORAGE_KEY = 'ssbu_combo_lab_data';
+
+        function loadComboData() {
+            try {
+                const saved = localStorage.getItem(COMBOS_STORAGE_KEY);
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    if (Array.isArray(parsed)) comboData = parsed;
+                }
+            } catch (error) { console.warn('Could not load saved combo data:', error); }
+            comboData = comboData.map(combo => ({
+                ...combo,
+                playerId: combo.playerId || 102,
+                weightClass: combo.weightClass || 'mediumweight'
+            }));
+
+            // One-time migration: the four original Kageroy combos belong in Heavyweight.
+            const migrationKey = 'ssbu_kageroy_heavyweight_migrated_v1';
+            if (!localStorage.getItem(migrationKey)) {
+                comboData = comboData.map(combo => combo.playerId === 102 ? { ...combo, weightClass: 'heavyweight' } : combo);
+                saveComboData();
+                localStorage.setItem(migrationKey, '1');
+            }
+        }
+
+        function saveComboData() {
+            try { localStorage.setItem(COMBOS_STORAGE_KEY, JSON.stringify(comboData)); queueSharedSave(); }
+            catch (error) { console.warn('Could not save combo data:', error); }
+        }
+
+        let comboNavExpanded = false;
+
+        function toggleComboNav() {
+            comboNavExpanded = !comboNavExpanded;
+            const nav = document.getElementById('combo-player-nav');
+            const chevron = document.getElementById('combo-nav-chevron');
+            if (nav) nav.classList.toggle('hidden', !comboNavExpanded);
+            if (chevron) chevron.style.transform = comboNavExpanded ? 'rotate(90deg)' : 'rotate(0deg)';
+            switchTab('combo-lab');
+        }
+
+        function renderComboPlayerSidebar() {
+            const nav = document.getElementById('combo-player-nav');
+            if (!nav) return;
+            nav.innerHTML = baPlayersData.map(player => `
+                <button onclick="selectComboPlayer(${player.id})" class="w-full text-left px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${selectedComboPlayerId === player.id ? 'text-slate-200 bg-slate-800/70' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-900/60'}">
+                    ${escapeHtml(player.name)} <span class="text-slate-600">/ ${escapeHtml(player.tag)}</span>
+                </button>
+            `).join('');
+        }
+
+        function selectComboPlayer(playerId) {
+            selectedComboPlayerId = playerId ? Number(playerId) : null;
+            comboNavExpanded = true;
+            const nav = document.getElementById('combo-player-nav');
+            const chevron = document.getElementById('combo-nav-chevron');
+            if (nav) nav.classList.remove('hidden');
+            if (chevron) chevron.style.transform = 'rotate(90deg)';
+            switchTab('combo-lab');
+            renderCombos();
+        }
+
+        function comboCardHtml(combo) {
+            const attempts = combo.lands + combo.failed;
+            const rate = attempts > 0 ? Math.round((combo.lands / attempts) * 100) : 0;
+            const sumDamage = (combo.moves || []).reduce((acc, m) => acc + (parseFloat(m.damage) || 0), 0);
+            return `<div class="glass-panel p-5 rounded-xl space-y-4 relative group border-t-2 border-indigo-500 flex flex-col justify-between">
+                <div class="absolute top-3 right-3 flex items-center space-x-2">
+                    <button onclick="openAddComboModal(${combo.id})" class="text-slate-500 hover:text-indigo-400" title="Edit Combo"><i data-lucide="edit-3" class="w-4 h-4"></i></button>
+                    <button onclick="deleteCombo(${combo.id})" class="text-slate-500 hover:text-rose-400" title="Delete Combo"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                </div>
+                <div class="space-y-3"><div class="pr-12"><h3 class="font-header text-2xl font-bold text-white">${escapeHtml(combo.title)}</h3>
+                    <div class="flex items-center gap-2 mt-1"><span class="px-2 py-0.5 bg-emerald-950/60 text-emerald-400 border border-emerald-800/50 rounded text-xs font-semibold">Usable @ ${escapeHtml(combo.usable)}</span><span class="px-2 py-0.5 bg-amber-950/60 text-amber-400 border border-amber-800/50 rounded text-xs font-semibold">Total: ~${sumDamage.toFixed(1)}%</span></div></div>
+                    <div><p class="text-xs font-semibold text-slate-400 uppercase mb-2">Move Sequence & Per-Move Damage %:</p><div class="flex flex-wrap items-center gap-1.5">${(combo.moves || []).map((m,idx)=>`<div class="flex items-center bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1 text-xs"><span class="text-slate-200 font-medium">${escapeHtml(m.name)}</span><span class="ml-1.5 text-amber-400 font-bold bg-slate-950 px-1.5 py-0.5 rounded text-[11px] border border-slate-800">${m.damage}%</span></div>${idx<combo.moves.length-1?'<span class="text-indigo-400 text-xs font-bold">➔</span>':''}`).join('')}</div></div>
+                </div>
+                <div class="pt-3 border-t border-slate-800/80 space-y-3"><div class="grid grid-cols-2 gap-3 bg-slate-900/80 p-2.5 rounded-lg border border-slate-800">
+                    <div class="flex items-center justify-between"><div><span class="text-[10px] text-slate-400 uppercase font-semibold block">Lands</span><span class="text-lg font-bold text-emerald-400">${combo.lands}</span></div><div class="flex space-x-1"><button onclick="updateLands(${combo.id},-1)" class="w-7 h-7 bg-slate-800 text-slate-300 rounded">-</button><button onclick="updateLands(${combo.id},1)" class="w-7 h-7 bg-emerald-600/30 text-emerald-300 rounded">+</button></div></div>
+                    <div class="flex items-center justify-between border-l border-slate-800 pl-3"><div><span class="text-[10px] text-slate-400 uppercase font-semibold block">Failed</span><span class="text-lg font-bold text-rose-400">${combo.failed}</span></div><div class="flex space-x-1"><button onclick="updateFailed(${combo.id},-1)" class="w-7 h-7 bg-slate-800 text-slate-300 rounded">-</button><button onclick="updateFailed(${combo.id},1)" class="w-7 h-7 bg-rose-600/30 text-rose-300 rounded">+</button></div></div></div>
+                    <div class="flex justify-between text-xs"><span class="text-slate-400">Success Ratio (${combo.lands}/${attempts})</span><span class="font-bold text-indigo-400">${rate}%</span></div>
+                    <div class="w-full bg-slate-900 h-2 rounded-full overflow-hidden"><div class="bg-gradient-to-r from-indigo-500 to-emerald-400 h-full" style="width:${rate}%"></div></div>
+                </div></div>`;
+        }
+
+        function renderCombos() {
+            renderComboPlayerSidebar();
+            const empty=document.getElementById('combo-player-empty'), book=document.getElementById('combo-player-book');
+            if (!selectedComboPlayerId) { empty.classList.remove('hidden'); book.classList.add('hidden'); return; }
+            const player=baPlayersData.find(p=>p.id===selectedComboPlayerId);
+            if(!player){selectedComboPlayerId=null; empty.classList.remove('hidden'); book.classList.add('hidden'); return;}
+            empty.classList.add('hidden'); book.classList.remove('hidden');
+            document.getElementById('combo-player-title').textContent=`${player.name} / ${player.tag} COMBO BOOK`;
+            document.getElementById('combo-player-subtitle').textContent=`${(player.mains||[]).join(', ')} • ${player.role||'BA Team'}`;
+            ['lightweight','mediumweight','heavyweight'].forEach(weight=>{
+                const el=document.getElementById(`combo-section-${weight}`);
+                const combos=comboData.filter(c=>c.playerId===player.id && c.weightClass===weight);
+                el.innerHTML=combos.length?combos.map(comboCardHtml).join(''):`<div class="col-span-full border border-dashed border-slate-800 rounded-xl p-8 text-center text-slate-600">No ${weight} combos logged yet.</div>`;
+            });
+            lucide.createIcons();
+        }
+
+        function updateLands(id, delta) {
+            const combo = comboData.find(c => c.id === id);
+            if (combo) {
+                combo.lands = Math.max(0, combo.lands + delta);
+                saveComboData();
+                renderCombos();
+            }
+        }
+
+        function updateFailed(id, delta) {
+            const combo = comboData.find(c => c.id === id);
+            if (combo) {
+                combo.failed = Math.max(0, combo.failed + delta);
+                saveComboData();
+                renderCombos();
+            }
+        }
+
+        function openAddComboModal(editId = null) {
+            const container=document.getElementById('move-steps-container');
+            container.innerHTML='';
+            const playerSelect=document.getElementById('combo-player-id');
+            playerSelect.innerHTML='<option value="">Select player...</option>'+baPlayersData.map(p=>`<option value="${p.id}">${escapeHtml(p.name)} / ${escapeHtml(p.tag)}</option>`).join('');
+            if(editId){
+                const combo=comboData.find(c=>c.id===editId); if(!combo)return;
+                document.getElementById('combo-modal-title').textContent='EDIT COMBO LAB EXPERIMENT';
+                document.getElementById('combo-edit-id').value=combo.id;
+                document.getElementById('combo-player-id').value=combo.playerId||selectedComboPlayerId||'';
+                document.getElementById('combo-weight-class').value=combo.weightClass||'mediumweight';
+                document.getElementById('combo-name').value=combo.title;
+                document.getElementById('combo-usable').value=combo.usable;
+                document.getElementById('combo-lands').value=combo.lands;
+                document.getElementById('combo-failed').value=combo.failed;
+                (combo.moves||[]).forEach(m=>addMoveStepInput(m.name,m.damage));
+            }else{
+                document.getElementById('combo-modal-title').textContent='LOG NEW COMBO LAB EXPERIMENT';
+                document.getElementById('combo-form').reset();
+                document.getElementById('combo-edit-id').value='';
+                document.getElementById('combo-player-id').value=selectedComboPlayerId||baPlayersData[0]?.id||'';
+                document.getElementById('combo-weight-class').value='mediumweight';
+                addMoveStepInput('Down Throw',7.2); addMoveStepInput('Jab',8.3);
+            }
+            recalculateTotalDmg();
+            document.getElementById('combo-modal').classList.remove('hidden');
+            document.getElementById('combo-modal').classList.add('flex');
+            lucide.createIcons();
+        }
+
+        function closeAddComboModal() {
+            document.getElementById('combo-modal').classList.add('hidden');
+            document.getElementById('combo-modal').classList.remove('flex');
+            document.getElementById('combo-form').reset();
+        }
+
+        function addMoveStepInput(name = '', damage = '') {
+            const container = document.getElementById('move-steps-container');
+            const stepDiv = document.createElement('div');
+            stepDiv.className = 'flex items-center space-x-2 move-step-row';
+            stepDiv.innerHTML = `
+                <input type="text" placeholder="Move name (e.g. Down Throw)" value="${escapeHtml(name)}" required class="move-name-input flex-1 bg-slate-950 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
+                <div class="relative w-28">
+                    <input type="number" step="0.1" min="0" placeholder="0.0" value="${damage}" required oninput="recalculateTotalDmg()" class="move-damage-input w-full bg-slate-950 border border-slate-800 rounded pl-2.5 pr-6 py-1.5 text-xs text-amber-400 font-bold focus:outline-none focus:border-indigo-500">
+                    <span class="absolute right-2 top-1/2 transform -translate-y-1/2 text-xs text-slate-500 font-bold">%</span>
+                </div>
+                <button type="button" onclick="this.parentElement.remove(); recalculateTotalDmg();" class="text-slate-500 hover:text-rose-400 p-1" title="Remove move step">
+                    <i data-lucide="minus-circle" class="w-4 h-4"></i>
+                </button>
+            `;
+            container.appendChild(stepDiv);
+            lucide.createIcons();
+        }
+
+        function recalculateTotalDmg() {
+            const rows = document.querySelectorAll('.move-step-row');
+            let sum = 0;
+            rows.forEach(r => {
+                const dmgVal = parseFloat(r.querySelector('.move-damage-input')?.value) || 0;
+                sum += dmgVal;
+            });
+            document.getElementById('calculated-total-damage').textContent = `${sum.toFixed(1)}%`;
+        }
+
+        function handleComboSubmit(e) {
+            e.preventDefault();
+            const editId = document.getElementById('combo-edit-id').value;
+            const title = document.getElementById('combo-name').value;
+            const playerId = Number(document.getElementById('combo-player-id').value);
+            const weightClass = document.getElementById('combo-weight-class').value;
+            const usable = document.getElementById('combo-usable').value || '0%';
+            const lands = parseInt(document.getElementById('combo-lands').value) || 0;
+            const failed = parseInt(document.getElementById('combo-failed').value) || 0;
+
+            const moveRows = document.querySelectorAll('.move-step-row');
+            const moves = [];
+            moveRows.forEach(r => {
+                const name = r.querySelector('.move-name-input')?.value || 'Move';
+                const damage = parseFloat(r.querySelector('.move-damage-input')?.value) || 0;
+                moves.push({ name, damage });
+            });
+
+            if (editId) {
+                const combo = comboData.find(c => c.id == editId);
+                if (combo) {
+                    combo.title = title;
+                    combo.playerId = playerId;
+                    combo.weightClass = weightClass;
+                    combo.usable = usable;
+                    combo.lands = lands;
+                    combo.failed = failed;
+                    combo.moves = moves;
+                }
+            } else {
+                const newCombo = {
+                    id: Date.now(),
+                    playerId,
+                    weightClass,
+                    title,
+                    usable,
+                    lands,
+                    failed,
+                    moves
+                };
+                comboData.push(newCombo);
+            }
+
+            saveComboData();
+            selectedComboPlayerId = playerId;
+            closeAddComboModal();
+            renderCombos();
+        }
+
+        function deleteCombo(id) {
+            comboData = comboData.filter(c => c.id !== id);
+            saveComboData();
+            renderCombos();
+        }
+
+        const ssbuFightersList = [
+            "Mario", "Donkey Kong", "Link", "Samus", "Dark Samus", "Yoshi", "Kirby", "Fox", "Pikachu", 
+            "Luigi", "Ness", "Captain Falcon", "Jigglypuff", "Peach", "Daisy", "Bowser", "Ice Climbers", 
+            "Sheik", "Zelda", "Dr. Mario", "Pichu", "Falco", "Marth", "Lucina", "Young Link", "Ganondorf", 
+            "Mewtwo", "Roy", "Chrom", "Mr. Game & Watch", "Meta Knight", "Pit", "Dark Pit", "Zero Suit Samus", 
+            "Wario", "Snake", "Ike", "Squirtle", "Ivysaur", "Charizard", "Diddy Kong", "Lucas", "Sonic", 
+            "King Dedede", "Olimar", "Lucario", "R.O.B.", "Toon Link", "Wolf", "Villager", "Mega Man", 
+            "Wii Fit Trainer", "Rosalina & Luma", "Little Mac", "Greninja", "Palutena", "Pac-Man", "Robin", 
+            "Shulk", "Bowser Jr.", "Duck Hunt", "Ryu", "Ken", "Cloud", "Corrin", "Bayonetta", "Inkling", 
+            "Ridley", "Simon", "Richter", "King K. Rool", "Isabelle", "Incineroar", "Piranha Plant", "Joker", 
+            "Hero", "Banjo & Kazooie", "Terry", "Byleth", "Min Min", "Steve", "Sephiroth", "Pyra/Mythra", 
+            "Kazuya", "Sora", "Mii Brawler", "Mii Swordfighter", "Mii Gunner"
+        ].sort((a, b) => a.localeCompare(b));
+
+        let characterMatchups = {};
+
+        function generateFullFighterDatabase() {
+            const archetypeMap = {
+                "Mario": "All-Rounder", "Donkey Kong": "Heavy / Grappler", "Link": "Zoner", "Samus": "Zoner", 
+                "Dark Samus": "Zoner", "Yoshi": "Brawler / Rushdown", "Kirby": "Brawler / Rushdown", "Fox": "Brawler / Rushdown", 
+                "Pikachu": "Brawler / Rushdown", "Luigi": "Heavy / Grappler", "Ness": "Zoner", "Captain Falcon": "Brawler / Rushdown", 
+                "Jigglypuff": "Brawler / Rushdown", "Peach": "All-Rounder", "Daisy": "All-Rounder", "Bowser": "Heavy / Grappler", 
+                "Ice Climbers": "Brawler / Rushdown", "Sheik": "Brawler / Rushdown", "Zelda": "Zoner", "Dr. Mario": "Heavy / Grappler", 
+                "Pichu": "Brawler / Rushdown", "Falco": "Brawler / Rushdown", "Marth": "Sword Fighter", "Lucina": "Sword Fighter", 
+                "Young Link": "Zoner", "Ganondorf": "Heavy / Grappler", "Mewtwo": "Zoner", "Roy": "Sword Fighter", 
+                "Chrom": "Sword Fighter", "Mr. Game & Watch": "FGC / Gimmick", "Meta Knight": "Sword Fighter", "Pit": "All-Rounder", 
+                "Dark Pit": "All-Rounder", "Zero Suit Samus": "Brawler / Rushdown", "Wario": "Brawler / Rushdown", "Snake": "Zoner", 
+                "Ike": "Sword Fighter", "Squirtle": "Brawler / Rushdown", "Ivysaur": "Zoner", "Charizard": "Heavy / Grappler", 
+                "Diddy Kong": "All-Rounder", "Lucas": "Zoner", "Sonic": "Brawler / Rushdown", "King Dedede": "Heavy / Grappler", 
+                "Olimar": "Zoner", "Lucario": "All-Rounder", "R.O.B.": "Zoner", "Toon Link": "Zoner", 
+                "Wolf": "All-Rounder", "Villager": "Zoner", "Mega Man": "Zoner", "Wii Fit Trainer": "Zoner", 
+                "Rosalina & Luma": "Zoner", "Little Mac": "Brawler / Rushdown", "Greninja": "Brawler / Rushdown", "Palutena": "Zoner", 
+                "Pac-Man": "Zoner", "Robin": "Zoner", "Shulk": "Sword Fighter", "Bowser Jr.": "Zoner", 
+                "Duck Hunt": "Zoner", "Ryu": "FGC / Gimmick", "Ken": "FGC / Gimmick", "Cloud": "Sword Fighter", 
+                "Corrin": "Sword Fighter", "Bayonetta": "Brawler / Rushdown", "Inkling": "All-Rounder", "Ridley": "Heavy / Grappler", 
+                "Simon": "Zoner", "Richter": "Zoner", "King K. Rool": "Heavy / Grappler", "Isabelle": "Zoner", 
+                "Incineroar": "Heavy / Grappler", "Piranha Plant": "Zoner", "Joker": "All-Rounder", "Hero": "Zoner", 
+                "Banjo & Kazooie": "Zoner", "Terry": "FGC / Gimmick", "Byleth": "Sword Fighter", "Min Min": "Zoner", 
+                "Steve": "FGC / Gimmick", "Sephiroth": "Sword Fighter", "Pyra/Mythra": "Sword Fighter", "Kazuya": "FGC / Gimmick", 
+                "Sora": "Sword Fighter", "Mii Brawler": "Brawler / Rushdown", "Mii Swordfighter": "Sword Fighter", "Mii Gunner": "Zoner"
+            };
+
+            const archetypeData = {
+                "Heavy / Grappler": {
+                    lookOutFor: [
+                        "Armored smash attacks and high-damage command grabs at the ledge.",
+                        "Early stock kills boosted by rage mechanics and heavy survivability.",
+                        "Fast out-of-shield command grabs or heavy trade scenarios on landing."
+                    ],
+                    exploits: [
+                        "Massive hurtboxes make them vulnerable to continuous combo strings.",
+                        "Poor disadvantage state and vulnerability to persistent projectile walls.",
+                        "Telegraphed, linear recoveries that can be gimp-ed early off-stage."
+                    ],
+                    moves: [
+                        { name: "Heavy Armored Strike", detail: "High priority attack with super armor that wins direct trades in neutral." },
+                        { name: "Command Grab / Heavy Throw", detail: "Bypasses shield defense to deal 18%+ damage and take stage position." },
+                        { name: "Out of Shield Option", detail: "Heavy frame reversal used to punish unsafely spaced aerial attacks." },
+                        { name: "Kill Confirm Special", detail: "High knockback move designed to take stocks early near the ledge." }
+                    ],
+                    stagePicks: { best: "Town and City", worst: "Final Destination" },
+                    notes: "Keep spacing tight with projectiles or disjoints. Avoid trading hitboxes directly up close!"
+                },
+                "Zoner": {
+                    lookOutFor: [
+                        "Multi-angle projectile walls preventing clean ground stage approach.",
+                        "Ledge-trapping setups that cover get-up options with persistent hitboxes.",
+                        "Off-stage walling that forces unsafe high or deep recovery paths."
+                    ],
+                    exploits: [
+                        "Weak in close-quarters brawling once you bypass their projectile wall.",
+                        "Heavy reliance on spacing makes them vulnerable to fast burst-in options.",
+                        "Slower out-of-shield options when pressed directly from behind."
+                    ],
+                    moves: [
+                        { name: "Primary Projectile Poke", detail: "Fast projectile tool to control neutral pace and force jumps." },
+                        { name: "Trap / Ledge Set", detail: "Persistent area-of-control option to trap ledge roll or neutral get-up." },
+                        { name: "Disjointed Fair / Bair", detail: "Keeps rushdown opponents at bay when jumping over projectiles." },
+                        { name: "Get-Away Mobility Special", detail: "Escape tool used to reset distance back to full stage length." }
+                    ],
+                    stagePicks: { best: "Final Destination", worst: "Tri-Plat / Battlefield" },
+                    notes: "Be patient when approaching. Walk and shield projectiles rather than jumping recklessly into their air arc."
+                },
+                "Brawler / Rushdown": {
+                    lookOutFor: [
+                        "Explosive frame-data and fast shield pressure that forces panic options.",
+                        "High-mobility burst attacks that catch landing or double-jump attempts.",
+                        "Extensive 50%+ combo extensions off grab or tilt starters."
+                    ],
+                    exploits: [
+                        "Shorter reach allows disjointed sword fighters to wall them out cleanly.",
+                        "Aggressive over-commitments can be baited into heavy out-of-shield punishes.",
+                        "Lighter weight classes mean earlier kill percents off read punishes."
+                    ],
+                    moves: [
+                        { name: "Fast Frame Neutral Starter", detail: "Ultra-fast frame attack used to trigger extended combo strings." },
+                        { name: "Burst Movement Special", detail: "Covers ground rapidly to punish whiffed moves or defensive rolls." },
+                        { name: "Shield Pressure Aerial", detail: "Safe on shield move allowing immediate frame-trap mixups or grabs." },
+                        { name: "Combo Finisher / Spike", detail: "High percent kill option off juggling or off-stage edgeguards." }
+                    ],
+                    stagePicks: { best: "Small Battlefield", worst: "Kalos Pokemon League" },
+                    notes: "Use safe out-of-shield options and weapon disjoints to prevent them from breathing inside your range."
+                },
+                "Sword Fighter": {
+                    lookOutFor: [
+                        "Safe disjointed weapon hitboxes that space cleanly outside shield range.",
+                        "Landing back-airs and forward-fairs that wall out neutral approaches.",
+                        "Wide-sweeping arc kill moves covering tech options on platforms."
+                    ],
+                    exploits: [
+                        "Lack of command grabs makes heavy shielding effective against them.",
+                        "Linear recovery paths that can be intercepted with disjointed edgeguards.",
+                        "Slow grab startup frames leave them open to fast shield-drop pressure."
+                    ],
+                    moves: [
+                        { name: "Disjointed Spacing Fair/Bair", detail: "Safe sword arc designed to wall neutral and control air space." },
+                        { name: "Out-Of-Shield Sword Up-B", detail: "Fast frame reversal out of shield when pressure is unsafely spaced." },
+                        { name: "Platform Trap Up-Tilt/Smash", detail: "Covers platform tech-chases with wide sword arcs." },
+                        { name: "Edgeguarding Down-Tilt/Fair", detail: "Long range poke designed to catch recoveries below the ledge." }
+                    ],
+                    stagePicks: { best: "Battlefield", worst: "Final Destination" },
+                    notes: "Parry landing aerials or out-space them with superior mobility or projectiles. Exploit linear recoveries."
+                },
+                "FGC / Gimmick": {
+                    lookOutFor: [
+                        "Intangibility/invincibility frames on key command inputs and crouch-dashes.",
+                        "Touch-of-death or massive 60%+ damage output from a single neutral loss.",
+                        "Gimmick meters or resource mechanics that trigger sudden power spikes."
+                    ],
+                    exploits: [
+                        "Poor aerial drift and horizontal mobility off-stage.",
+                        "Struggles heavily against disjointed sword ranges or long-distance zoning.",
+                        "Complex input buffering makes them prone to whiff punishes if baited."
+                    ],
+                    moves: [
+                        { name: "Command Input / Stun Move", detail: "Invincible startup attack causing heavy stun or combo reset." },
+                        { name: "Command Grab / Rage Reversal", detail: "Bypasses shields at high % to secure stocks or stage control." },
+                        { name: "Heavy Armor / Counter Option", detail: "Absorbs incoming hits to deliver massive counter damage." },
+                        { name: "Resource / Meter Special", detail: "Powers up special moves once condition or meter is satisfied." }
+                    ],
+                    stagePicks: { best: "Small Battlefield", worst: "Kalos Pokemon League" },
+                    notes: "DI away on combo starters! Out-zone them from a distance and avoid close-quarters brawls."
+                },
+                "All-Rounder": {
+                    lookOutFor: [
+                        "Flexible neutral game with balanced options for both zoning and boxing.",
+                        "Strong fundamental out-of-shield punishes and safe aerial spacing.",
+                        "Adaptable playstyle that quickly shifts between aggressive and defensive."
+                    ],
+                    exploits: [
+                        "Lack extreme specialized gimmicks; predictable risk/reward ratios.",
+                        "Can be out-ranged by pure Zoners or out-speeded by top Rushdown characters.",
+                        "Standard recovery routes that allow consistent ledge-trap timing."
+                    ],
+                    moves: [
+                        { name: "Neutral Spacing Poke", detail: "Solid neutral tool to check approach vectors and chip damage." },
+                        { name: "Out-Of-Shield Punish", detail: "Reliable frame option to punish unsafe attacks on shield." },
+                        { name: "Combo Starter Tilt/Grab", detail: "Sets up reliable 30-40% damage strings at low percents." },
+                        { name: "Kill Confirm Aerial", detail: "Dependable stock-ending move off ledge traps or platform reads." }
+                    ],
+                    stagePicks: { best: "Small Battlefield", worst: "Final Destination" },
+                    notes: "Identify which playstyle the opponent favors (aggressive or defensive) and adjust your spacing strategy accordingly."
+                }
+            };
+
+            const defaultCountersByArchetype = {
+                "Heavy / Grappler": ["Palutena", "Pikachu", "Min Min", "Young Link", "Pac-Man"],
+                "Zoner": ["Fox", "Wolf", "Roy", "Joker", "Falco"],
+                "Brawler / Rushdown": ["Mr. Game & Watch", "Lucina", "Palutena", "Samus", "Pyra/Mythra"],
+                "Sword Fighter": ["Pikachu", "Min Min", "Sonic", "Diddy Kong", "Zero Suit Samus"],
+                "FGC / Gimmick": ["Min Min", "Sonic", "Pikachu", "Lucina", "Palutena"],
+                "All-Rounder": ["Lucina", "Palutena", "Pikachu", "Fox", "Roy"]
+            };
+
+            ssbuFightersList.forEach(name => {
+                const arch = archetypeMap[name] || "All-Rounder";
+                const archInfo = archetypeData[arch] || archetypeData["All-Rounder"];
+
+                characterMatchups[name] = {
+                    class: arch,
+                    moves: archInfo.moves,
+                    lookOutFor: archInfo.lookOutFor,
+                    exploits: archInfo.exploits,
+                    topCounters: defaultCountersByArchetype[arch] || ["Pikachu", "Palutena", "Lucina", "Fox", "Min Min"],
+                    stagePicks: archInfo.stagePicks,
+                    notes: archInfo.notes
+                };
+            });
+
+            // Specific Custom Overrides for Iconic High-Priority Matchups
+            characterMatchups["Steve"] = {
+                class: "FGC / Gimmick",
+                moves: [
+                    { name: "Minecart (Side-B)", detail: "Command grab projectile that deals high damage and forces tech/escape scenarios." },
+                    { name: "Anvil (Down-Air)", detail: "Heavy drop move with huge priority and heavy shield damage." },
+                    { name: "Up-Tilt String", detail: "Frame 4 launcher that strings into 60%+ damage combos or death setups." },
+                    { name: "Block Placement", detail: "Creates custom walls on stage and off ledge to ruin recoveries and trap players." }
+                ],
+                lookOutFor: [
+                    "Diamond weapon upgrades that double smash attack kill power and move speed.",
+                    "Block walls at ledge that force non-standard recoveries or lead to instant anvil spikes.",
+                    "Nil (No-Impact Landing) ladder combos off up-tilt or jab."
+                ],
+                exploits: [
+                    "Resource dependency: without iron or gold, Minecart and weapons become drastically weaker.",
+                    "Poor movement speed without gold rails or side-B mobility.",
+                    "Contest mining by using long-range pokes through or over blocks."
+                ],
+                topCounters: ["Hero", "Min Min", "Cloud", "Sonic", "Sephiroth"],
+                stagePicks: { best: "Battlefield", worst: "Final Destination" },
+                notes: "Force Steve to spend iron on Minecart / Anvil. Never give him free time to mine diamond!"
+            };
+
+            characterMatchups["Pyra/Mythra"] = {
+                class: "Sword Fighter",
+                moves: [
+                    { name: "Foresight (Mythra)", detail: "Frame 2 dodge mechanic that slows attacker and opens guaranteed counter-attacks." },
+                    { name: "Photon Array / Ray of Punishment", detail: "Wide multi-hit projectile pressure in neutral." },
+                    { name: "Prominence Revolt (Pyra Up-B)", detail: "Massive kill move out of shield or off ledge setups." },
+                    { name: "Blazing End (Pyra Side-B)", detail: "Spinning sword trap that restricts space and builds heavy damage." }
+                ],
+                lookOutFor: [
+                    "Instant character swaps mid-combo to maximize Mythra speed and Pyra kill power.",
+                    "Foresight triggers when attacking Mythra prematurely.",
+                    "Pyra's forward smash and Up-B out-of-shield killing under 80%."
+                ],
+                exploits: [
+                    "Weak recovery sideways: Mythra's side-B and up-B are easy to spike or intercept.",
+                    "Pyra's heavy endlag on whiffed specials and smash attacks.",
+                    "Poking Mythra's shield from maximum weapon range."
+                ],
+                topCounters: ["Pikachu", "Palutena", "Diddy Kong", "Zero Suit Samus", "Joker"],
+                stagePicks: { best: "Small Battlefield", worst: "Town and City" },
+                notes: "Bait out Foresight before committing to heavy smash moves. Edgeguard Mythra relentlessly."
+            };
+
+            characterMatchups["Cloud"] = {
+                class: "Sword Fighter",
+                moves: [
+                    { name: "Back Air (Bair)", detail: "Safe, massive aerial disjoint with almost no landing lag." },
+                    { name: "Climhazard (Up-B)", detail: "Frame 7 out-of-shield kill and reversal tool." },
+                    { name: "Limit Cross Slash", detail: "Incredible burst speed kill option that breaks neutral setups." }
+                ],
+                lookOutFor: [
+                    "Limit Break charge forced off-stage or in neutral.",
+                    "Bair pressure on shield into instant Climhazard OOS.",
+                    "Limit Cross Slash tech chases and platform traps."
+                ],
+                exploits: [
+                    "Without Limit, Climhazard does not snap to ledge from above or far away.",
+                    "Linear horizontal recovery that gets gimballed by multi-hit edgeguards.",
+                    "Poor grab reward and slow throw animations."
+                ],
+                topCounters: ["Palutena", "Pikachu", "Min Min", "Zero Suit Samus", "Lucina"],
+                stagePicks: { best: "Battlefield", worst: "Final Destination" },
+                notes: "Space outside Cloud's sword range and exploit non-Limit Climhazard recoveries relentlessly."
+            };
+
+            characterMatchups["Kazuya"] = {
+                class: "FGC / Gimmick",
+                moves: [
+                    { name: "Electric Wind God Fist (EWGF)", detail: "Invincible frame starter with stun properties leading to 0-to-death combos." },
+                    { name: "Demon God Fist (Unblockable/Stun)", detail: "Crouch dash mixup that freezes opponents." },
+                    { name: "Gates of Hell Throw", detail: "Command throw that stage spikes or kills at high %." }
+                ],
+                lookOutFor: [
+                    "Intangibility frames on crouch dash and EWGF startup.",
+                    "Rage Drive command grab killing under 60%.",
+                    "Axe kick shield breaks and platform traps."
+                ],
+                exploits: [
+                    "Very poor horizontal mobility and poor aerial drift off-stage.",
+                    "Highly vulnerable to camp/zone strategies with disjoints or projectiles.",
+                    "Strict dependency on close-quarters interactions."
+                ],
+                topCounters: ["Min Min", "Sonic", "Pikachu", "Pac-Man", "Young Link"],
+                stagePicks: { best: "Kalos / Large Stages", worst: "Final Destination" },
+                notes: "DI AWAY on EWGF setups! Never roll inward or fight Kazuya up close without disjoints."
+            };
+        }
+
+        function initMatchupDropdown() {
+            generateFullFighterDatabase();
+            filterMatchupCharacters();
+        }
+
+        function filterMatchupCharacters() {
+            const search = (document.getElementById('matchup-search')?.value || '').toLowerCase();
+            const archetypeFilter = document.getElementById('matchup-archetype-filter')?.value || 'ALL';
+            const select = document.getElementById('matchup-char-select');
+            
+            if (!select) return;
+
+            const previousSelection = select.value;
+            
+            const filteredFighters = ssbuFightersList.filter(name => {
+                const data = characterMatchups[name];
+                const matchesSearch = name.toLowerCase().includes(search);
+                const matchesArchetype = archetypeFilter === 'ALL' || (data && data.class === archetypeFilter);
+                return matchesSearch && matchesArchetype;
+            });
+
+            if (filteredFighters.length === 0) {
+                select.innerHTML = `<option value="">No matching fighters found</option>`;
+                const container = document.getElementById('matchup-detail-container');
+                if (container) {
+                    container.innerHTML = `
+                        <div class="glass-panel p-8 text-center text-slate-400 rounded-xl">
+                            <i data-lucide="search-x" class="w-10 h-10 mx-auto mb-2 opacity-50"></i>
+                            <p class="font-semibold">No fighters found matching "${escapeHtml(search)}".</p>
+                        </div>
+                    `;
+                }
+                lucide.createIcons();
+                return;
+            }
+
+            select.innerHTML = filteredFighters.map(name => `
+                <option value="${escapeHtml(name)}">${escapeHtml(name)} (${characterMatchups[name]?.class || 'All-Rounder'})</option>
+            `).join('');
+
+            if (filteredFighters.includes(previousSelection)) {
+                select.value = previousSelection;
+            } else {
+                select.value = filteredFighters[0];
+            }
+
+            renderMatchupDetails();
+        }
+
+        function loadChecklistData() {
+            try {
+                const saved = localStorage.getItem(CHECKLIST_STORAGE_KEY);
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    if (Array.isArray(parsed) && parsed.length === checklistData.length) checklistData = parsed;
+                }
+            } catch (error) {
+                console.warn('Could not load saved checklist data:', error);
+            }
+        }
+
+        function saveChecklistData() {
+            try {
+                localStorage.setItem(CHECKLIST_STORAGE_KEY, JSON.stringify(checklistData));
+                queueSharedSave();
+            } catch (error) {
+                console.warn('Could not save checklist data:', error);
+            }
+        }
+
+        function renderChecklist() {
+            const container = document.getElementById('checklist-container');
+            if (!container) return;
+
+            container.innerHTML = checklistData.map((item, idx) => `
+                <div onclick="toggleChecklist(${idx})" class="glass-card p-3 rounded-lg flex items-center justify-between cursor-pointer group">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-5 h-5 rounded border flex items-center justify-center transition-colors ${item.done ? 'bg-indigo-600 border-indigo-500 text-white' : 'border-slate-700 bg-slate-900 group-hover:border-slate-500'}">
+                            ${item.done ? '<i data-lucide="check" class="w-3.5 h-3.5"></i>' : ''}
+                        </div>
+                        <span class="text-sm ${item.done ? 'line-through text-slate-500' : 'text-slate-200'}">${escapeHtml(item.text)}</span>
+                    </div>
+                    <span class="text-xs px-2 py-0.5 rounded ${item.done ? 'bg-emerald-950/60 text-emerald-400 border border-emerald-800/40' : 'bg-slate-800 text-slate-400'}">
+                        ${item.done ? 'Completed' : 'Pending'}
+                    </span>
+                </div>
+            `).join('');
+
+            lucide.createIcons();
+        }
+
+        function renderMatchupDetails() {
+            const select = document.getElementById('matchup-char-select');
+            if (!select || !select.value) return;
+
+            const char = select.value;
+            const data = characterMatchups[char];
+            const container = document.getElementById('matchup-detail-container');
+
+            if (!data) return;
+
+            container.innerHTML = `
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <!-- Left Column: Key Moves & Archetype -->
+                    <div class="glass-panel p-5 rounded-xl space-y-4">
+                        <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                            <div>
+                                <h3 class="font-header text-3xl font-bold text-white leading-none">${char.toUpperCase()}</h3>
+                                <p class="text-xs text-indigo-400 font-semibold mt-1">Fighter Scouting Profile</p>
+                            </div>
+                            <span class="px-3 py-1 bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 rounded-full text-xs font-semibold">${data.class}</span>
+                        </div>
+                        
+                        <div>
+                            <h4 class="text-xs font-semibold text-slate-400 uppercase mb-2 flex items-center gap-2">
+                                <i data-lucide="zap" class="w-4 h-4 text-amber-400"></i> Key Moves Breakdown
+                            </h4>
+                            <div class="space-y-2">
+                                ${(data.moves || []).map(m => `
+                                    <div class="bg-slate-900/80 p-2.5 rounded-lg border border-slate-800">
+                                        <div class="text-xs font-bold text-slate-200">${escapeHtml(m.name)}</div>
+                                        <div class="text-[11px] text-slate-400 mt-0.5 leading-snug">${escapeHtml(m.detail)}</div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Middle Column: Look Out For & Exploits -->
+                    <div class="glass-panel p-5 rounded-xl space-y-4">
+                        <h3 class="font-header text-2xl font-bold text-white border-b border-slate-800 pb-3">THREATS & EXPLOITABLE WEAKNESSES</h3>
+                        
+                        <div>
+                            <h4 class="text-xs font-semibold text-rose-400 uppercase mb-2 flex items-center gap-2">
+                                <i data-lucide="shield-alert" class="w-4 h-4 text-rose-400"></i> What to Look Out For
+                            </h4>
+                            <ul class="space-y-2">
+                                ${(data.lookOutFor || []).map(item => `
+                                    <li class="flex items-start gap-2 bg-rose-950/20 border border-rose-900/40 p-2.5 rounded-lg text-xs text-rose-200">
+                                        <span class="text-rose-500 font-bold">•</span>
+                                        <span>${escapeHtml(item)}</span>
+                                    </li>
+                                `).join('')}
+                            </ul>
+                        </div>
+
+                        <div>
+                            <h4 class="text-xs font-semibold text-emerald-400 uppercase mb-2 flex items-center gap-2">
+                                <i data-lucide="target" class="w-4 h-4 text-emerald-400"></i> What Can Be Exploited
+                            </h4>
+                            <ul class="space-y-2">
+                                ${(data.exploits || []).map(item => `
+                                    <li class="flex items-start gap-2 bg-emerald-950/20 border border-emerald-900/40 p-2.5 rounded-lg text-xs text-emerald-200">
+                                        <span class="text-emerald-500 font-bold">•</span>
+                                        <span>${escapeHtml(item)}</span>
+                                    </li>
+                                `).join('')}
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- Right Column: Top 5 Counter-Picks & Stage Bans -->
+                    <div class="glass-panel p-5 rounded-xl space-y-4 flex flex-col justify-between">
+                        <div>
+                            <h3 class="font-header text-2xl font-bold text-white border-b border-slate-800 pb-3 flex items-center gap-2">
+                                <i data-lucide="swords" class="w-5 h-5 text-indigo-400"></i> BEST 5 COUNTER-PICKS
+                            </h3>
+                            <p class="text-xs text-slate-400 mb-3">Top recommended fighter counter-picks against ${escapeHtml(char)}:</p>
+                            
+                            <div class="space-y-2">
+                                ${(data.topCounters || []).slice(0, 5).map((counterChar, rank) => `
+                                    <div class="flex items-center justify-between bg-slate-900/90 border border-slate-800 p-2.5 rounded-lg">
+                                        <div class="flex items-center space-x-3">
+                                            <span class="w-6 h-6 rounded-full bg-indigo-600/30 text-indigo-300 font-bold text-xs flex items-center justify-center border border-indigo-500/30">
+                                                #${rank + 1}
+                                            </span>
+                                            <span class="text-sm font-bold text-white">${escapeHtml(counterChar)}</span>
+                                        </div>
+                                        <span class="text-[10px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded border border-slate-700">Favorable</span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+
+                        <div class="pt-4 border-t border-slate-800 space-y-3">
+                            <h4 class="text-xs font-semibold text-slate-400 uppercase">Stage Recommendations</h4>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div class="bg-emerald-950/30 p-2.5 rounded-lg border border-emerald-800/40">
+                                    <span class="text-[10px] text-emerald-400 font-semibold block uppercase">Pick Stage</span>
+                                    <span class="text-xs text-slate-200 font-bold">${escapeHtml(data.stagePicks.best)}</span>
+                                </div>
+                                <div class="bg-rose-950/30 p-2.5 rounded-lg border border-rose-800/40">
+                                    <span class="text-[10px] text-rose-400 font-semibold block uppercase">Ban Stage</span>
+                                    <span class="text-xs text-slate-200 font-bold">${escapeHtml(data.stagePicks.worst)}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="glass-panel p-4 rounded-xl border-l-4 border-indigo-500">
+                    <h4 class="text-xs font-semibold text-indigo-400 uppercase mb-1">Coach & Scouting Note</h4>
+                    <p class="text-sm text-slate-200">${escapeHtml(data.notes)}</p>
+                </div>
+            `;
+
+            lucide.createIcons();
+        }
+
+        function toggleChecklist(idx) {
+            checklistData[idx].done = !checklistData[idx].done;
+            saveChecklistData();
+            renderChecklist();
+        }
+
+        function saveDailyFocus() {
+            const focusText = document.getElementById('daily-focus-text')?.value;
+            if (focusText !== undefined) {
+                localStorage.setItem('ssbu_daily_focus', focusText);
+                queueSharedSave();
+            }
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        window.addEventListener('DOMContentLoaded', async () => {
+            // Restore local cache first so the UI never starts empty.
+            loadBaPlayers();
+            loadRostersData();
+            loadComboData();
+            loadChecklistData();
+
+            const savedFocus = localStorage.getItem('ssbu_daily_focus');
+            if (savedFocus && document.getElementById('daily-focus-text')) {
+                document.getElementById('daily-focus-text').value = savedFocus;
+            }
+            const savedBaNotes = localStorage.getItem('ba_team_notes');
+            if (savedBaNotes && document.getElementById('ba-team-notes')) {
+                document.getElementById('ba-team-notes').value = savedBaNotes;
+            }
+
+            // If configured, replace the local cache with the team's shared copy.
+            await loadSharedState();
+
+            renderRosters();
+            renderCombos();
+            initMatchupDropdown();
+            renderChecklist();
+            renderBaTeam();
+            renderComboPlayerSidebar();
+            lucide.createIcons();
+
+            if (sharedSyncEnabled) {
+                // Lightweight polling keeps everyone's dashboard current without
+                // requiring a separate server or app.
+                setInterval(pollSharedState, 4000);
+            }
+        });
+    </script>
+</body>
+</html>
